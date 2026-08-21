@@ -19,7 +19,10 @@
 
 import { classifyPrompt } from "../prompt-engine/classifier/classify-prompt";
 import { parsePrompt } from "../prompt-engine/parser/parse-prompt";
+import { polishLight } from "../prompt-engine/rules/light-polish";
+import { selectSections } from "../prompt-engine/rules/select-sections";
 import { TEMPLATE_REGISTRY } from "../prompt-engine/templates/registry";
+import { resolveTemplate } from "../prompt-engine/templates/resolve-template";
 import type { PromptTemplate, SectionId } from "../prompt-engine/templates/template-types";
 import { CLASSIFIER_CASES, GENERATOR_CASES, PARSER_CASES, RULES_CASES, TEMPLATE_CASES } from "./verify-cases";
 import assert from "node:assert/strict";
@@ -28,6 +31,7 @@ import assert from "node:assert/strict";
 type ParserCase = (typeof PARSER_CASES)[number];
 type ClassifierCase = (typeof CLASSIFIER_CASES)[number];
 type TemplateCase = (typeof TEMPLATE_CASES)[number];
+type RulesCase = (typeof RULES_CASES)[number];
 
 /** One recorded failure, echoed immediately and listed again in the summary. */
 type Failure = {
@@ -100,7 +104,7 @@ function runSection<Case>(
 
 /**
  * Placeholder for sections whose case table exists but whose engine API has
- * not landed yet (rules → generator tasks). Empty tables report 0/0 so every
+ * not landed yet (the generator task). Empty tables report 0/0 so the
  * section stays visible in the output.
  */
 function pendingSection(sectionName: string, cases: ReadonlyArray<never>): SectionResult {
@@ -265,13 +269,66 @@ function runTemplatesSection(failures: Failure[]): SectionResult {
   };
 }
 
+/**
+ * Verifies one rules case, dispatched on its kind. Gate 1 (determinism):
+ * the full pipeline (parse → polishLight for "light"; resolve → parse →
+ * selectSections for "select") runs twice and both results must serialize
+ * byte-identically. Gate 2 (expectation): deepStrictEqual against the pinned
+ * sentence or ordered section list.
+ */
+function verifyRulesCase(testCase: RulesCase, failures: Failure[]): void {
+  if (testCase.kind === "light") {
+    const firstRun = polishLight(parsePrompt(testCase.input), testCase.input);
+    const secondRun = polishLight(parsePrompt(testCase.input), testCase.input);
+
+    if (JSON.stringify(firstRun) !== JSON.stringify(secondRun)) {
+      recordFailure(failures, "rules", `${testCase.name} (determinism)`, [
+        `run 1: ${JSON.stringify(firstRun)}`,
+        `run 2: ${JSON.stringify(secondRun)}`,
+      ]);
+      return;
+    }
+
+    try {
+      assert.deepStrictEqual(firstRun, testCase.expectedSentence);
+    } catch {
+      recordFailure(failures, "rules", testCase.name, [
+        `expected: ${JSON.stringify(testCase.expectedSentence)}`,
+        `got:      ${JSON.stringify(firstRun)}`,
+      ]);
+    }
+    return;
+  }
+
+  const template = resolveTemplate(testCase.taskType);
+  const firstRun = selectSections(template, testCase.level, parsePrompt(testCase.input));
+  const secondRun = selectSections(template, testCase.level, parsePrompt(testCase.input));
+
+  if (JSON.stringify(firstRun) !== JSON.stringify(secondRun)) {
+    recordFailure(failures, "rules", `${testCase.name} (determinism)`, [
+      `run 1: ${JSON.stringify(firstRun)}`,
+      `run 2: ${JSON.stringify(secondRun)}`,
+    ]);
+    return;
+  }
+
+  try {
+    assert.deepStrictEqual(firstRun, testCase.expectedSections);
+  } catch {
+    recordFailure(failures, "rules", testCase.name, [
+      `expected: ${JSON.stringify(testCase.expectedSections)}`,
+      `got:      ${JSON.stringify(firstRun)}`,
+    ]);
+  }
+}
+
 function main(): void {
   const failures: Failure[] = [];
   const sections: SectionResult[] = [
     runSection("parser", PARSER_CASES, verifyParserCase, failures),
     runSection("classifier", CLASSIFIER_CASES, verifyClassifierCase, failures),
     runTemplatesSection(failures),
-    pendingSection("rules", RULES_CASES),
+    runSection("rules", RULES_CASES, verifyRulesCase, failures),
     pendingSection("generator", GENERATOR_CASES),
   ];
 

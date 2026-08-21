@@ -13,7 +13,8 @@
  * ../prompt-engine/classifier/to-confidence.ts).
  */
 import type { ConfidenceBand } from "../prompt-engine/classifier/to-confidence";
-import type { PromptCategory, PromptTaskType } from "../prompt-engine/types";
+import type { SectionId } from "../prompt-engine/templates/template-types";
+import type { EnhancementLevel, PromptCategory, PromptTaskType } from "../prompt-engine/types";
 
 /**
  * Parser cases: raw input → exact expected ParsedPrompt.
@@ -201,11 +202,87 @@ export const TEMPLATE_CASES: ReadonlyArray<TemplateCase> = [
 ];
 
 /**
- * Rules cases: reserved for the rules-layer task. Shape will be parsed
- * analysis → expected preserved/polished slots (constraint enforcement,
- * enhancement-level adjustments); left empty until that API exists.
+ * Rules cases: drive the rule layer (../prompt-engine/rules/*) through two
+ * kinds. "light" runs parsePrompt → polishLight and pins the polished
+ * sentence byte-exact; "select" resolves the declared task type's template
+ * and pins the ordered SectionId list selectSections returns after its
+ * drop-empty merge (decision D5). Expected strings/lists below are the
+ * pipeline's actual deterministic outputs, computed and pinned from
+ * parsePrompt's heuristics — e.g. "add google login" yields subject
+ * "google login" (no cut triggers, no filler), so polishLight emits
+ * "Add google login.".
  */
-export const RULES_CASES: ReadonlyArray<never> = [];
+export type RulesCase =
+  | { kind: "light"; name: string; input: string; expectedSentence: string }
+  | {
+      kind: "select";
+      name: string;
+      input: string;
+      taskType: PromptTaskType;
+      level: EnhancementLevel;
+      expectedSections: SectionId[];
+    };
+
+export const RULES_CASES: ReadonlyArray<RulesCase> = [
+  // Material light example: fix + domain keyword → preservation clause with
+  // the enriched domain; golden byte-exact target of the rules task.
+  {
+    kind: "light",
+    name: "material light example reproduces",
+    input: "fix login problem",
+    expectedSentence: "Investigate and resolve the login problem while preserving existing authentication behavior.",
+  },
+  {
+    kind: "light",
+    name: "fix without domain keyword falls back to generic preservation",
+    input: "fix navbar overflow",
+    expectedSentence: "Investigate and resolve the navbar overflow while preserving existing behavior.",
+  },
+  {
+    kind: "light",
+    name: "non-fix action stays plain",
+    input: "add google login",
+    expectedSentence: "Add google login.",
+  },
+  {
+    kind: "select",
+    name: "material standard bug-fix structure",
+    input: "fix login problem",
+    taskType: "bug-fix",
+    level: "standard",
+    expectedSections: ["objective", "requirements", "verification"],
+  },
+  {
+    // parsed.constraints is empty for this input, so the detailed list's
+    // "constraints" entry is dropped by the merge.
+    kind: "select",
+    name: "detailed keeps constraints only when present",
+    input: "fix login problem",
+    taskType: "bug-fix",
+    level: "detailed",
+    expectedSections: ["objective", "problem", "scope", "requirements", "verification"],
+  },
+  {
+    // The parser-example sentence parses one constraint, so the detailed
+    // "constraints" section survives the merge.
+    kind: "select",
+    name: "detailed keeps parsed constraints",
+    input: "Add Google login using Next.js but don't change email authentication.",
+    taskType: "bug-fix",
+    level: "detailed",
+    expectedSections: ["objective", "problem", "scope", "requirements", "constraints", "verification"],
+  },
+  {
+    // Minimal fallback recipe has no droppable list sections, so standard
+    // passes through untouched regardless of the parsed slots.
+    kind: "select",
+    name: "general standard minimal",
+    input: "fix login problem",
+    taskType: "general",
+    level: "standard",
+    expectedSections: ["objective", "requirements", "verification"],
+  },
+];
 
 /**
  * Generator cases: reserved for the template/generator task. Shape will be
