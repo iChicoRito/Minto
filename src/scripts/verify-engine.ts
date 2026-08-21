@@ -7,8 +7,8 @@
  * it imports only engine modules and node builtins inside plain functions, so
  * it can never affect `next build`.
  *
- * Sections run in order (parser → classifier → rules → generator) and each
- * prints "N/M passed". Every case's engine calls execute exactly twice and
+ * Sections run in order (parser → classifier → templates → rules →
+ * generator) and each prints "N/M passed". Every case's engine calls execute exactly twice and
  * both results must serialize byte-identically — a divergence fails the case
  * as "<case> (determinism)". Failures never abort the run; the summary lists
  * every failed name and sets process.exitCode = 1 at the very end.
@@ -19,12 +19,15 @@
 
 import { classifyPrompt } from "../prompt-engine/classifier/classify-prompt";
 import { parsePrompt } from "../prompt-engine/parser/parse-prompt";
-import { CLASSIFIER_CASES, GENERATOR_CASES, PARSER_CASES, RULES_CASES } from "./verify-cases";
+import { TEMPLATE_REGISTRY } from "../prompt-engine/templates/registry";
+import type { PromptTemplate, SectionId } from "../prompt-engine/templates/template-types";
+import { CLASSIFIER_CASES, GENERATOR_CASES, PARSER_CASES, RULES_CASES, TEMPLATE_CASES } from "./verify-cases";
 import assert from "node:assert/strict";
 
 /** Case-table item shapes, derived from ./verify-cases. */
 type ParserCase = (typeof PARSER_CASES)[number];
 type ClassifierCase = (typeof CLASSIFIER_CASES)[number];
+type TemplateCase = (typeof TEMPLATE_CASES)[number];
 
 /** One recorded failure, echoed immediately and listed again in the summary. */
 type Failure = {
@@ -152,11 +155,122 @@ function verifyClassifierCase(testCase: ClassifierCase, failures: Failure[]): vo
   }
 }
 
+/** Strength lists every template must define, in ascending order. */
+const ENHANCEMENT_LEVELS = ["light", "standard", "detailed"] as const;
+
+/**
+ * True when every id of `sub` reappears in `superList` at a strictly later
+ * index than the previous hit — i.e. an order-preserving subset (template
+ * invariant b).
+ */
+function isOrderedSubset(sub: readonly SectionId[], superList: readonly SectionId[]): boolean {
+  let cursor = 0;
+  for (const id of sub) {
+    const found = superList.indexOf(id, cursor);
+    if (found === -1) {
+      return false;
+    }
+    cursor = found + 1;
+  }
+  return true;
+}
+
+/**
+ * Verifies one template case against TEMPLATE_REGISTRY. Gate 1
+ * (determinism): two independent registry reads must serialize
+ * byte-identically — pure data, so trivially true, kept for parity with the
+ * parser/classifier gates. Gate 2 (structure): identity fields plus the
+ * per-entry invariants (a)-(d):
+ *
+ *   (a) light is exactly ["objective"] for every task type;
+ *   (b) standard is an order-preserving subset of detailed;
+ *   (c) objective is the first element of every strength list;
+ *   (d) no duplicate ids within any single strength list.
+ */
+function verifyTemplateCase(testCase: TemplateCase, failures: Failure[]): void {
+  const firstRun: PromptTemplate | undefined = TEMPLATE_REGISTRY[testCase.taskType];
+  const secondRun: PromptTemplate | undefined = TEMPLATE_REGISTRY[testCase.taskType];
+
+  if (firstRun === undefined || secondRun === undefined) {
+    recordFailure(failures, "templates", testCase.name, [`missing TEMPLATE_REGISTRY entry for "${testCase.taskType}"`]);
+    return;
+  }
+
+  if (JSON.stringify(firstRun.sections) !== JSON.stringify(secondRun.sections)) {
+    recordFailure(failures, "templates", `${testCase.name} (determinism)`, [
+      `run 1: ${JSON.stringify(firstRun.sections)}`,
+      `run 2: ${JSON.stringify(secondRun.sections)}`,
+    ]);
+    return;
+  }
+
+  try {
+    assert.strictEqual(firstRun.id, testCase.taskType, "entry id must equal its registry key");
+    assert.strictEqual(firstRun.category, testCase.expectedCategory, "entry category must match its recipe file");
+
+    // (a) light strength is exactly ["objective"] for every task type.
+    assert.deepStrictEqual(firstRun.sections.light, ["objective"], 'light must be exactly ["objective"]');
+
+    for (const level of ENHANCEMENT_LEVELS) {
+      const list: readonly SectionId[] = firstRun.sections[level];
+      // (c) objective opens every strength list.
+      assert.strictEqual(list[0], "objective", `"${level}" must open with "objective"`);
+      // (d) no duplicate section ids within a strength list.
+      assert.strictEqual(new Set(list).size, list.length, `"${level}" repeats a section id: ${JSON.stringify(list)}`);
+    }
+
+    // (b) standard is an order-preserving subset of detailed.
+    const standard = firstRun.sections.standard;
+    const detailed = firstRun.sections.detailed;
+    assert.ok(
+      isOrderedSubset(standard, detailed),
+      `standard ${JSON.stringify(standard)} is not an order-preserving subset of detailed ${JSON.stringify(detailed)}`,
+    );
+  } catch (error) {
+    recordFailure(failures, "templates", testCase.name, [error instanceof Error ? error.message : String(error)]);
+  }
+}
+
+/**
+ * Template invariant (e): the registry holds exactly the declared task
+ * types — none missing, none extra — and exactly 13 entries.
+ */
+function verifyRegistryCompleteness(failures: Failure[]): void {
+  try {
+    const registeredKeys = Object.keys(TEMPLATE_REGISTRY).sort();
+    const expectedKeys = TEMPLATE_CASES.map((entry) => entry.taskType).sort();
+    assert.deepStrictEqual(registeredKeys, expectedKeys);
+    assert.strictEqual(registeredKeys.length, 13);
+  } catch (error) {
+    recordFailure(failures, "templates", "registry completeness", [
+      error instanceof Error ? error.message : String(error),
+      `registered keys: ${JSON.stringify(Object.keys(TEMPLATE_REGISTRY).sort())}`,
+    ]);
+  }
+}
+
+/**
+ * Templates section driver: the completeness gate counts as one check
+ * alongside the 13 per-case checks, reported as a single section.
+ */
+function runTemplatesSection(failures: Failure[]): SectionResult {
+  const beforeCompleteness = failures.length;
+  verifyRegistryCompleteness(failures);
+
+  const cases = runSection("templates", TEMPLATE_CASES, verifyTemplateCase, failures);
+  return {
+    name: cases.name,
+    passed: cases.passed + (failures.length === beforeCompleteness ? 1 : 0),
+    total: cases.total + 1,
+  };
+}
+
 function main(): void {
   const failures: Failure[] = [];
   const sections: SectionResult[] = [
     runSection("parser", PARSER_CASES, verifyParserCase, failures),
     runSection("classifier", CLASSIFIER_CASES, verifyClassifierCase, failures),
+    runTemplatesSection(failures),
     pendingSection("rules", RULES_CASES),
     pendingSection("generator", GENERATOR_CASES),
   ];

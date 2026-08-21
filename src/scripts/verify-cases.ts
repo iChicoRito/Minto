@@ -4,7 +4,8 @@
  *
  * Data tables plus the types that shape them; no logic. The runner in
  * ./verify-engine.ts consumes these tables section by section (parser →
- * classifier → rules → generator); later engine tasks append their cases to
+ * classifier → templates → rules → generator); later engine tasks append
+ * their cases to
  * the reserved tables below, which keeps the runner wired without dead code.
  *
  * Confidence bounds are documented per case against the D1 formula
@@ -166,6 +167,37 @@ export const CLASSIFIER_CASES: ReadonlyArray<ClassifierCase> = [
     expectedBand: "low",
     maxConfidence: 59,
   },
+];
+
+/**
+ * Template cases: one per task type, driving structural checks over
+ * TEMPLATE_REGISTRY (../prompt-engine/templates/registry.ts). The tables
+ * stay pure data — the runner owns the assertions: light pinned to exactly
+ * ["objective"], objective opening every strength list, no duplicate ids
+ * within a list, standard an order-preserving subset of detailed. Order
+ * mirrors the PromptTaskType union for deterministic output; expectedCategory
+ * pins each entry's category per its recipe file.
+ */
+export type TemplateCase = {
+  name: string;
+  taskType: PromptTaskType;
+  expectedCategory: PromptCategory;
+};
+
+export const TEMPLATE_CASES: ReadonlyArray<TemplateCase> = [
+  { name: "bug-fix template structure", taskType: "bug-fix", expectedCategory: "development" },
+  { name: "feature template structure", taskType: "feature", expectedCategory: "development" },
+  { name: "code-review template structure", taskType: "code-review", expectedCategory: "development" },
+  { name: "refactor template structure", taskType: "refactor", expectedCategory: "development" },
+  { name: "testing template structure", taskType: "testing", expectedCategory: "development" },
+  { name: "documentation template structure", taskType: "documentation", expectedCategory: "development" },
+  { name: "rewrite template structure", taskType: "rewrite", expectedCategory: "writing" },
+  { name: "summarize template structure", taskType: "summarize", expectedCategory: "writing" },
+  { name: "research template structure", taskType: "research", expectedCategory: "research" },
+  { name: "comparison template structure", taskType: "comparison", expectedCategory: "research" },
+  { name: "ui-review template structure", taskType: "ui-review", expectedCategory: "design" },
+  { name: "image-prompt template structure", taskType: "image-prompt", expectedCategory: "design" },
+  { name: "general template structure", taskType: "general", expectedCategory: "general" },
 ];
 
 /**
