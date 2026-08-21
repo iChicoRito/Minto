@@ -1,0 +1,22 @@
+// Prompt-engine purity gate 1 (type level).
+//
+// This project reference compiles ONLY src/prompt-engine/** WITHOUT the DOM lib
+// and WITHOUT any @types packages ("types": []), so any use of browser globals
+// (window, document, localStorage, ...) becomes a compile error instead of
+// silently type-checking against the app-wide DOM libs in tsconfig.json.
+//
+// Run: npx tsc -p tsconfig.engine.json --noEmit   (must exit 0)
+//
+// Purity gate 2 (grep level) — both commands must return zero hits:
+//   imports:
+//     rg -n "from ['\"](react|next|@/)" src/prompt-engine
+//   browser globals / nondeterminism:
+//     rg -n "\b(window|document|localStorage|sessionStorage|navigator|indexedDB|Math\.random|Date\.now|toLocaleLowerCase|toLocaleUpperCase)\b" src/prompt-engine
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2020"],
+    "types": []
+  },
+  "include": ["src/prompt-engine/**/*.ts"]
+}
