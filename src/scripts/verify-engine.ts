@@ -8,21 +8,23 @@
  * it can never affect `next build`.
  *
  * Sections run in order (parser → classifier → rules → generator) and each
- * prints "N/M passed". Every parse call executes exactly twice and both
- * results must serialize byte-identically — a divergence fails the case as
- * "<case> (determinism)". Failures never abort the run; the summary lists
+ * prints "N/M passed". Every case's engine calls execute exactly twice and
+ * both results must serialize byte-identically — a divergence fails the case
+ * as "<case> (determinism)". Failures never abort the run; the summary lists
  * every failed name and sets process.exitCode = 1 at the very end.
  *
  * Usage:
  *   npm run verify:engine
  */
 
+import { classifyPrompt } from "../prompt-engine/classifier/classify-prompt";
 import { parsePrompt } from "../prompt-engine/parser/parse-prompt";
 import { CLASSIFIER_CASES, GENERATOR_CASES, PARSER_CASES, RULES_CASES } from "./verify-cases";
 import assert from "node:assert/strict";
 
-/** Case-table item shape, derived from ./verify-cases. */
+/** Case-table item shapes, derived from ./verify-cases. */
 type ParserCase = (typeof PARSER_CASES)[number];
+type ClassifierCase = (typeof CLASSIFIER_CASES)[number];
 
 /** One recorded failure, echoed immediately and listed again in the summary. */
 type Failure = {
@@ -95,18 +97,66 @@ function runSection<Case>(
 
 /**
  * Placeholder for sections whose case table exists but whose engine API has
- * not landed yet (classifier → rules → generator tasks). Empty tables report
- * 0/0 so every section stays visible in the output.
+ * not landed yet (rules → generator tasks). Empty tables report 0/0 so every
+ * section stays visible in the output.
  */
 function pendingSection(sectionName: string, cases: ReadonlyArray<never>): SectionResult {
   return { name: sectionName, passed: 0, total: cases.length };
+}
+
+/**
+ * Verifies one classifier case. Gate 1 (determinism): the full parse →
+ * classify pipeline runs twice and both results must serialize
+ * byte-identically. Gate 2 (expectation): deepStrictEqual on the reported
+ * taskType + category + band triple, then inclusive range asserts on
+ * confidence when the case declares bounds.
+ */
+function verifyClassifierCase(testCase: ClassifierCase, failures: Failure[]): void {
+  const firstRun = classifyPrompt(parsePrompt(testCase.input), testCase.input);
+  const secondRun = classifyPrompt(parsePrompt(testCase.input), testCase.input);
+
+  if (JSON.stringify(firstRun) !== JSON.stringify(secondRun)) {
+    recordFailure(failures, "classifier", `${testCase.name} (determinism)`, [
+      `run 1: ${JSON.stringify(firstRun)}`,
+      `run 2: ${JSON.stringify(secondRun)}`,
+    ]);
+    return;
+  }
+
+  try {
+    assert.deepStrictEqual(
+      { taskType: firstRun.taskType, category: firstRun.category, band: firstRun.band },
+      {
+        taskType: testCase.expectedTaskType,
+        category: testCase.expectedCategory,
+        band: testCase.expectedBand,
+      },
+    );
+    if (testCase.minConfidence !== undefined) {
+      assert.ok(
+        firstRun.confidence >= testCase.minConfidence,
+        `confidence ${firstRun.confidence} < min ${testCase.minConfidence}`,
+      );
+    }
+    if (testCase.maxConfidence !== undefined) {
+      assert.ok(
+        firstRun.confidence <= testCase.maxConfidence,
+        `confidence ${firstRun.confidence} > max ${testCase.maxConfidence}`,
+      );
+    }
+  } catch {
+    recordFailure(failures, "classifier", testCase.name, [
+      `expected: taskType=${testCase.expectedTaskType} category=${testCase.expectedCategory} band=${testCase.expectedBand}`,
+      `got:      ${JSON.stringify(firstRun)}`,
+    ]);
+  }
 }
 
 function main(): void {
   const failures: Failure[] = [];
   const sections: SectionResult[] = [
     runSection("parser", PARSER_CASES, verifyParserCase, failures),
-    pendingSection("classifier", CLASSIFIER_CASES),
+    runSection("classifier", CLASSIFIER_CASES, verifyClassifierCase, failures),
     pendingSection("rules", RULES_CASES),
     pendingSection("generator", GENERATOR_CASES),
   ];
