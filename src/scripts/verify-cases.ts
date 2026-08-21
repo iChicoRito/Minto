@@ -407,4 +407,44 @@ export const GENERATOR_CASES: ReadonlyArray<GeneratorCase> = [
       "- Return findings in clear Markdown.",
     ].join("\n"),
   },
+  {
+    name: "standard trims strings and filters blank array items",
+    content: {
+      objective: "  Resolve the login problem.  ",
+      problem: " \t ",
+      requirements: ["  Identify the cause.  ", "\n\t", " Apply the correction. "],
+    },
+    level: "standard",
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "Resolve the login problem.",
+      "",
+      "## Requirements",
+      "",
+      "- Identify the cause.",
+      "- Apply the correction.",
+    ].join("\n"),
+  },
+  {
+    name: "detailed omits blank sections without a trailing newline",
+    content: {
+      objective: "  Resolve the login problem.  ",
+      problem: "\n\t",
+      scope: [" ", "\t"],
+      requirements: [],
+      verification: "  ",
+    },
+    level: "detailed",
+    expectedMarkdown: ["# Objective", "", "Resolve the login problem."].join("\n"),
+  },
+  {
+    name: "light joins normalized objective array items with single spaces",
+    content: {
+      objective: ["  Investigate", "and resolve  ", "  ", "\t the issue. "],
+      requirements: ["This section must not render in light mode."],
+    },
+    level: "light",
+    expectedMarkdown: "Investigate and resolve the issue.",
+  },
 ];

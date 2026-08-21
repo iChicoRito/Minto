@@ -19,9 +19,15 @@ import type { EnhancementLevel } from "../types";
 
 type SectionValue = string | string[];
 
-/** Renders one section body without changing the supplied value. */
-function renderBody(value: SectionValue): string {
-  return Array.isArray(value) ? value.map((item) => `- ${item}`).join("\n") : value;
+/** Renders one section body after removing surrounding and blank content. */
+function renderBody(value: SectionValue): string | undefined {
+  if (Array.isArray(value)) {
+    const items = value.map((item) => item.trim()).filter((item) => item.length > 0);
+    return items.length === 0 ? undefined : items.map((item) => `- ${item}`).join("\n");
+  }
+
+  const text = value.trim();
+  return text.length === 0 ? undefined : text;
 }
 
 /**
@@ -34,7 +40,16 @@ export function generateMarkdown(
 ): string {
   if (opts.level === "light") {
     const objective = content.objective;
-    return objective === undefined ? "" : Array.isArray(objective) ? objective.join("\n") : objective;
+    if (objective === undefined) {
+      return "";
+    }
+
+    return Array.isArray(objective)
+      ? objective
+          .map((item) => item.trim())
+          .filter((item) => item.length > 0)
+          .join(" ")
+      : objective.trim();
   }
 
   const blocks: string[] = [];
@@ -44,7 +59,7 @@ export function generateMarkdown(
     }
 
     const body = renderBody(value);
-    if (body.length === 0) {
+    if (body === undefined) {
       continue;
     }
 
