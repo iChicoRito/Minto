@@ -284,9 +284,127 @@ export const RULES_CASES: ReadonlyArray<RulesCase> = [
   },
 ];
 
-/**
- * Generator cases: reserved for the template/generator task. Shape will be
- * enhanced analysis → expected final prompt text pinned per enhancement
- * level; left empty until that API exists.
- */
-export const GENERATOR_CASES: ReadonlyArray<never> = [];
+/** Generator cases: filled section content → exact Markdown per strength. */
+export type GeneratorCase = {
+  name: string;
+  content: Partial<Record<SectionId, string | string[]>>;
+  level: EnhancementLevel;
+  expectedMarkdown: string;
+};
+
+export const GENERATOR_CASES: ReadonlyArray<GeneratorCase> = [
+  {
+    name: "material input object renders standard Markdown",
+    content: {
+      objective: "...",
+      requirements: ["...", "..."],
+      constraints: ["..."],
+    },
+    level: "standard",
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "...",
+      "",
+      "## Requirements",
+      "",
+      "- ...",
+      "- ...",
+      "",
+      "## Constraints",
+      "",
+      "- ...",
+    ].join("\n"),
+  },
+  {
+    name: "light renders the objective as a bare sentence",
+    content: {
+      objective: "Investigate and resolve the login problem while preserving existing authentication behavior.",
+      requirements: ["This section must not render in light mode."],
+    },
+    level: "light",
+    expectedMarkdown: "Investigate and resolve the login problem while preserving existing authentication behavior.",
+  },
+  {
+    name: "standard renders strings and arrays with exact spacing",
+    content: {
+      objective: "Resolve the login problem.",
+      requirements: ["Identify the cause of the issue.", "Apply the necessary correction."],
+      verification: "Confirm that login works correctly.",
+    },
+    level: "standard",
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "Resolve the login problem.",
+      "",
+      "## Requirements",
+      "",
+      "- Identify the cause of the issue.",
+      "- Apply the necessary correction.",
+      "",
+      "## Verification",
+      "",
+      "Confirm that login works correctly.",
+    ].join("\n"),
+  },
+  {
+    name: "detailed renders all supplied sections in input order",
+    content: {
+      objective: "Resolve the login problem.",
+      problem: "The login flow sometimes fails.",
+      scope: ["Limit the work to the login flow."],
+      requirements: ["Identify the cause of the issue."],
+      constraints: ["Do not change email authentication."],
+      verification: ["Confirm that login works correctly."],
+    },
+    level: "detailed",
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "Resolve the login problem.",
+      "",
+      "## Problem",
+      "",
+      "The login flow sometimes fails.",
+      "",
+      "## Scope",
+      "",
+      "- Limit the work to the login flow.",
+      "",
+      "## Requirements",
+      "",
+      "- Identify the cause of the issue.",
+      "",
+      "## Constraints",
+      "",
+      "- Do not change email authentication.",
+      "",
+      "## Verification",
+      "",
+      "- Confirm that login works correctly.",
+    ].join("\n"),
+  },
+  {
+    name: "repeated rendering is deterministic",
+    content: {
+      objective: "Review the authentication flow.",
+      "review-scope": "Review the authentication flow.",
+      "output-format": ["Return findings in clear Markdown."],
+    },
+    level: "detailed",
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "Review the authentication flow.",
+      "",
+      "## Review Scope",
+      "",
+      "Review the authentication flow.",
+      "",
+      "## Output Format",
+      "",
+      "- Return findings in clear Markdown.",
+    ].join("\n"),
+  },
+];

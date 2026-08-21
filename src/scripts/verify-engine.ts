@@ -18,6 +18,7 @@
  */
 
 import { classifyPrompt } from "../prompt-engine/classifier/classify-prompt";
+import { generateMarkdown } from "../prompt-engine/generator/generate-markdown";
 import { parsePrompt } from "../prompt-engine/parser/parse-prompt";
 import { polishLight } from "../prompt-engine/rules/light-polish";
 import { selectSections } from "../prompt-engine/rules/select-sections";
@@ -32,6 +33,7 @@ type ParserCase = (typeof PARSER_CASES)[number];
 type ClassifierCase = (typeof CLASSIFIER_CASES)[number];
 type TemplateCase = (typeof TEMPLATE_CASES)[number];
 type RulesCase = (typeof RULES_CASES)[number];
+type GeneratorCase = (typeof GENERATOR_CASES)[number];
 
 /** One recorded failure, echoed immediately and listed again in the summary. */
 type Failure = {
@@ -100,15 +102,6 @@ function runSection<Case>(
     }
   }
   return { name: sectionName, passed, total: cases.length };
-}
-
-/**
- * Placeholder for sections whose case table exists but whose engine API has
- * not landed yet (the generator task). Empty tables report 0/0 so the
- * section stays visible in the output.
- */
-function pendingSection(sectionName: string, cases: ReadonlyArray<never>): SectionResult {
-  return { name: sectionName, passed: 0, total: cases.length };
 }
 
 /**
@@ -322,6 +315,30 @@ function verifyRulesCase(testCase: RulesCase, failures: Failure[]): void {
   }
 }
 
+/** Verifies exact Markdown output and the generator's two-run determinism gate. */
+function verifyGeneratorCase(testCase: GeneratorCase, failures: Failure[]): void {
+  const options = { level: testCase.level };
+  const firstRun = generateMarkdown(testCase.content, options);
+  const secondRun = generateMarkdown(testCase.content, options);
+
+  if (firstRun !== secondRun) {
+    recordFailure(failures, "generator", `${testCase.name} (determinism)`, [
+      `run 1: ${JSON.stringify(firstRun)}`,
+      `run 2: ${JSON.stringify(secondRun)}`,
+    ]);
+    return;
+  }
+
+  try {
+    assert.strictEqual(firstRun, testCase.expectedMarkdown);
+  } catch {
+    recordFailure(failures, "generator", testCase.name, [
+      `expected: ${JSON.stringify(testCase.expectedMarkdown)}`,
+      `got:      ${JSON.stringify(firstRun)}`,
+    ]);
+  }
+}
+
 function main(): void {
   const failures: Failure[] = [];
   const sections: SectionResult[] = [
@@ -329,7 +346,7 @@ function main(): void {
     runSection("classifier", CLASSIFIER_CASES, verifyClassifierCase, failures),
     runTemplatesSection(failures),
     runSection("rules", RULES_CASES, verifyRulesCase, failures),
-    pendingSection("generator", GENERATOR_CASES),
+    runSection("generator", GENERATOR_CASES, verifyGeneratorCase, failures),
   ];
 
   for (const section of sections) {
