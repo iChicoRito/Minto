@@ -1,10 +1,10 @@
 # 00 - START HERE
 
-Next: [[01 - OVERVIEW]]
+Next: [[01 - OVERVIEW]] · **Current status:** Phase 1 foundations and the Phase 2–3 engine pipeline are complete; UI, storage, and later phases remain ahead.
 
 **What this is about:** Prompt Enhancer
 **Written:** 21 August 2026
-**Last updated:** 21 August 2026
+**Last updated:** 22 August 2026
 
 ## What was handed over
 
@@ -18,7 +18,7 @@ The material was copied into `MATERIAL\`, so every line number cited in these no
 
 ## The short version
 
-This is a plan, not a product: nothing in the material reports that any part has been built, so every item in the roadmap starts as not begun. The tool it describes enhances prompts entirely in the browser — a parser recognises the pieces of an instruction, a scorer names its type and admits doubt, hand-written rules and templates shape the result, and a generator writes it out as Markdown. The document itself is clear about what matters most: the pipeline from parser to generator is the milestone; everything else is the product built around it (lines 1389–1405). Four places where the document disagrees with itself, and seven open questions, are recorded rather than papered over.
+This is a plan, not a product: the material itself reports no implementation, but the repository now has the Phase 1 foundations and the Phase 2–3 parser-to-Markdown engine pipeline. The tool it describes enhances prompts entirely in the browser — a parser recognises the pieces of an instruction, a scorer names its type and admits doubt, hand-written rules and templates shape the result, and a generator writes it out as Markdown. The document itself is clear about what matters most: the pipeline from parser to generator is the milestone; everything else is the product built around it (lines 1389–1405). Four places where the document disagrees with itself, and the questions that remain open, are recorded rather than papered over.
 
 ## Everything in this analysis
 
@@ -66,8 +66,6 @@ Things the material does not settle. Each one is a real gap, not a guess dressed
 | # | Question | Why it matters | Who can answer |
 |---|---|---|---|
 | Q-01 | How do the eighteen preset names map onto the thirteen task types? Presets such as API Design, Database, Improve Writing, and UI Design name no task type of their own | Presets pre-fill the task type and sections; without the mapping they cannot be built as described | The document's author |
-| Q-02 | How do raw scores become the percentage confidence bands? The worked example totals 11, but the printed weights give at most 7 for that sentence | The classifier's most important number rests on an unsettled step — see C-02 in [[02 - DOCUMENT FINDINGS#Where the documents disagree\|Where the documents disagree]] | The document's author |
-| Q-03 | Which heading layouts apply to the nine task types whose sections are never listed? | The rule engine cannot choose sections for types it has no recipe for | The document's author |
 | Q-04 | When two classifications tie, does the app pick the higher score or show both? The document offers both and chooses neither | Decides what the person actually sees on ambiguous input | The document's author |
 | Q-05 | Is 500 the starting maximum for history, or just an example number? | Sets a default in the settings' data tab | The document's author |
 | Q-06 | Which ordering governs the offline work — build-order step 20 or release version 1.3? The two disagree | Decides whether offline support lands before or well after the first stable release — see C-04 in [[02 - DOCUMENT FINDINGS#Where the documents disagree\|Where the documents disagree]] | The document's author |
@@ -75,8 +73,13 @@ Things the material does not settle. Each one is a real gap, not a guess dressed
 
 ## Questions since answered
 
-One revision has happened — the first, on 21 August 2026, recorded in [[13 - REVISION LOG]]. It answered none of the questions above; all seven stand open.
+Phase 2–3 settled Q-02 and Q-03 while preserving their original wording here for traceability. Q-02 uses the approved margin × evidence-floor formula: `confidence = round(min(margin, evidence))`, with `EVIDENCE_SATURATION = 7` and bands of ≥80 High, 60–79 Medium, and <60 Low. C-02 is a printed-weight arithmetic erratum; the implementation does not retune the weights to reach 11. Q-03 is settled by nine authored recipes for the previously unlisted task types. The engine tie rule is recorded with R-07; full conflict display remains Phase 6 work.
+
+| # | Question | Resolution |
+|---|---|---|
+| Q-02 | How do raw scores become the percentage confidence bands? The worked example totals 11, but the printed weights give at most 7 for that sentence | **Settled:** margin × evidence floor, with `EVIDENCE_SATURATION = 7`; C-02 is a printed-weight arithmetic erratum, not a reason to retune the score to 11. |
+| Q-03 | Which heading layouts apply to the nine task types whose sections are never listed? | **Settled:** nine recipes were authored, provenance-marked, and registered for the missing task types. |
 
 ## What changed
 
-Revised once. On 21 August 2026 work began on the build itself: Phase 1 implemented, both trackers brought level with the code, and one piece of this vault's own arithmetic corrected along the way. The record lives in [[13 - REVISION LOG]].
+Revised twice. On 21 August 2026 work began on the build itself: Phase 1 was implemented, both trackers were brought level with the code, and one piece of this vault's own arithmetic was corrected along the way. On 22 August 2026 the Phase 2–3 engine pipeline was completed and Q-02/Q-03 were settled without changing the material or later-phase scope. The record lives in [[13 - REVISION LOG]].

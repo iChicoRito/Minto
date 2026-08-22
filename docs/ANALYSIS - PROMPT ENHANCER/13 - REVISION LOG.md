@@ -23,3 +23,11 @@ Checks run: biome clean on every path touched, production build green, smoke tes
 **A correction to this vault's own notes.** These pages say an analysed prompt carries twelve fields. Counted properly, the shape written from the source material carries **eleven** — eight required and three optional (`action`, `subject`, `domain`). Twelve was a slip in the prose here, not a difference in the source material; the amended row is T-06 in [[09 - TASK TRACKER]]. The vocabulary counts were checked against the same lines and stand exact: five categories, thirteen task types, three strengths.
 
 Trackers brought level with the code: [[08 - ROADMAP TRACKER]] and [[09 - TASK TRACKER]].
+
+### 22 August 2026 — Phases 2 and 3 engine pipeline complete
+
+The parser-to-Markdown milestone was implemented beside these notes, following the approved Phase 2–3 plan. The repository now contains the material-derived engine behavior plus the following explicitly authored additions: parser matching heuristics and domain-keyword rules; twelve signal-weight tables beyond the material's bug-fix table; nine recipes for the task types whose layouts the material does not list; the category mapping; the Light-strength polish heuristic; authored section content generation; and the Markdown generator and synchronous pipeline behavior. These additions are implementation decisions, not claims that the source material specified them.
+
+The open points were reconciled without changing the later-phase boundary. Q-02 is settled by the margin × evidence-floor formula with `EVIDENCE_SATURATION = 7` and bands of ≥80 High, 60–79 Medium, and <60 Low. C-02 is retained as a printed-weight arithmetic erratum: the printed weights stand, and the implementation does not retune them to produce score 11. Q-03 is settled by the nine authored recipes. D4's engine tie behavior reports the low-confidence General fallback; the full conflict-display UI remains Phase 6 work. R-07 and T-15 therefore record the engine-side result only; the picker and message UI remain later scope.
+
+Evidence from the completion pass: `npm run verify:engine` passed 44/44 twice with byte-identical output, and the required type-check, purity, scoped Biome, build, static-route, frozen-template, and preset-metadata checks passed as recorded in the execution log.

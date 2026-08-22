@@ -2,22 +2,22 @@
 
 [[00 - START HERE|Back to start]] · Previous: [[07 - DEVELOPMENT ROADMAP]] · Next: [[09 - TASK TRACKER]]
 
-**Last checked:** 21 August 2026
+**Last checked:** 22 August 2026
 
 ## Where everything stands
 
 | Status | How many |
 |---|---|
-| ✅ Finished | 2 |
+| ✅ Finished | 10 |
 | 🟨 Being worked on | 0 |
-| ⭕ Not started | 25 |
+| ⭕ Not started | 17 |
 | ❌ Blocked | 0 |
 | 🔵 Already there | 1 |
 | ⬜ Dropped | 0 |
 | ❓ Unclear | 0 |
 | **Total** | **28** |
 
-Work began on 21 August 2026 — see [[13 - REVISION LOG]]. One item was found already standing in the working repository files, two were built and checked this pass, and twenty-five still wait their turn. The material itself is still only a plan and reports no work done.
+Work began on 21 August 2026 — see [[13 - REVISION LOG]]. One item was found already standing in the working repository files, and nine more roadmap items were built and checked in Phase 2–3. Seventeen still wait their turn; UI, storage, and later phases remain unchanged.
 
 ## Phase 1 — Foundations and the shape of the data
 
@@ -31,19 +31,19 @@ Work began on 21 August 2026 — see [[13 - REVISION LOG]]. One item was found a
 
 | # | What gets built | Status | Notes |
 |---|---|---|---|
-| R-04 | The prompt parser: actions, subjects, fields, technologies, limits, requirements | ⭕ Not started | |
-| R-05 | The three controlled word lists, with room to grow | ⭕ Not started | |
-| R-06 | The classifier on weighted scoring | ⭕ Not started | |
-| R-07 | Confidence bands and the low-confidence fallback to General | ⭕ Not started | The score-to-percentage step is unsettled — Q-02. |
+| R-04 | The prompt parser: actions, subjects, fields, technologies, limits, requirements | ✅ Finished | Parser complete, including authored matching heuristics and domain-keyword rules; provenance is recorded in the engine. |
+| R-05 | The three controlled word lists, with room to grow | ✅ Finished | The 11 actions, 8 constraint triggers, and 14 technologies are housed in the engine and checked. |
+| R-06 | The classifier on weighted scoring | ✅ Finished | Weighted classifier complete: the bug-fix table follows the material and 12 additional signal tables were authored. **D2/C-02:** C-02 is a printed-weight arithmetic erratum; weights were not retuned to reach 11. |
+| R-07 | Confidence bands and the low-confidence fallback to General | ✅ Finished | **D1/Q-02 settled:** `confidence = round(min(margin, evidence))` with `EVIDENCE_SATURATION = 7`; ≥80 is High, 60–79 Medium, and <60 Low. **D4:** ties cap at 50%, yield Low and General fallback; full conflict display remains Phase 6. This is the engine-side result; the manual picker and low-confidence message UI remain later scope. |
 
 ## Phase 3 — Turning understanding into structure
 
 | # | What gets built | Status | Notes |
 |---|---|---|---|
-| R-08 | The rule engine choosing headings per task type | ⭕ Not started | Recipes exist for four of thirteen types — Q-03. |
-| R-09 | Strength-dependent behaviour: light, standard, detailed | ⭕ Not started | |
-| R-10 | The template library and its resolver | ⭕ Not started | |
-| R-11 | The markdown generator, formatting kept apart from logic | ⭕ Not started | |
+| R-08 | The rule engine choosing headings per task type | ✅ Finished | **D3/Q-03 settled:** nine missing recipes were authored, provenance-marked, and validated alongside the four material recipes. |
+| R-09 | Strength-dependent behaviour: light, standard, detailed | ✅ Finished | **D5:** strength sections are validated and merged without empty headings. **D6:** Light renders the polished sentence bare. **D7:** Light uses authored action/domain polish and the approved preservation clause. |
+| R-10 | The template library and its resolver | ✅ Finished | The typed 13-recipe registry and resolver are complete; the nine beyond-material recipes are explicitly authored rather than presented as source material. |
+| R-11 | The markdown generator, formatting kept apart from logic | ✅ Finished | Deterministic Markdown generation and the parser-to-generator pipeline are complete, including the approved bare Light output. |
 
 ## Phase 4 — The workspace people use
 
@@ -84,7 +84,7 @@ Work began on 21 August 2026 — see [[13 - REVISION LOG]]. One item was found a
 
 ## What is blocked
 
-Nothing is blocked. The first phase is accounted for, and no obstacle stands in front of Phase 2.
+Nothing is blocked. Phase 1 and the Phase 2–3 engine pipeline are accounted for; later UI, storage, and product work waits its planned turn.
 
 ## Status legend
 

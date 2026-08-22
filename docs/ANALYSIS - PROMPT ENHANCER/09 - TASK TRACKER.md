@@ -2,7 +2,7 @@
 
 [[00 - START HERE|Back to start]] · Previous: [[08 - ROADMAP TRACKER]] · Next: [[10 - WORD LIST]]
 
-**Last checked:** 21 August 2026
+**Last checked:** 22 August 2026
 
 Every task here names where it came from. A task with no traceable origin is not on this list. All line numbers point at `prompt-enhancer-detailed-context.md` in this run's `MATERIAL\` folder.
 
@@ -10,9 +10,9 @@ Every task here names where it came from. A task with no traceable origin is not
 
 | Status | How many |
 |---|---|
-| ✅ Finished | 5 |
+| ✅ Finished | 21 |
 | 🟨 Being worked on | 0 |
-| ⭕ Not started | 50 |
+| ⭕ Not started | 34 |
 | ❌ Blocked | 0 |
 | 🔵 Already there | 2 |
 | ⬜ Dropped | 0 |
@@ -30,22 +30,22 @@ Every task here names where it came from. A task with no traceable origin is not
 | T-05 | Create the six pages at their addresses | Lines 119–141 | Home, presets, library, history, settings, about | [[07 - DEVELOPMENT ROADMAP#Phase 1 — Foundations and the shape of the data\|R-02]] | ✅ |
 | T-06 | Write down the shape of an analysed prompt | Lines 206–223 | The twelve fields an analysis carries, including the optional three — corrected: counted properly there are eleven fields, eight required and three optional; twelve was a prose slip in these notes, not a difference in the source material | [[07 - DEVELOPMENT ROADMAP#Phase 1 — Foundations and the shape of the data\|R-03]] | ✅ |
 | T-07 | Fix the vocabulary lists: five categories, thirteen task types, three strengths | Lines 225–262 | The three name lists everything else speaks in | [[07 - DEVELOPMENT ROADMAP#Phase 1 — Foundations and the shape of the data\|R-03]] | ✅ |
-| T-08 | Recognise the doing-word at the front of an instruction | Lines 291–307 | The eleven action words from add to compare | [[07 - DEVELOPMENT ROADMAP#Phase 2 — Understanding what was asked\|R-04]] | ⭕ |
-| T-09 | Pick out the protective phrases | Lines 309–322 | The eight limit phrases such as don't change and preserve | [[07 - DEVELOPMENT ROADMAP#Phase 2 — Understanding what was asked\|R-04]] | ⭕ |
-| T-10 | Spot named technologies against a fixed list | Lines 324–347 | The fourteen-entry starter dictionary and the worked example | [[07 - DEVELOPMENT ROADMAP#Phase 2 — Understanding what was asked\|R-04]] | ⭕ |
-| T-11 | Give the three word lists their own homes in the engine folder | Lines 142–148 | The named files for keywords, technologies, and constraints | [[07 - DEVELOPMENT ROADMAP#Phase 2 — Understanding what was asked\|R-05]] | ⭕ |
-| T-12 | Give every task type its own weights table | Lines 361–374 | The bug-fix signal table: bug worth 5, fix worth 3, and so on | [[07 - DEVELOPMENT ROADMAP#Phase 2 — Understanding what was asked\|R-06]] | ⭕ |
-| T-13 | Add up the scores and pick the winning type | Lines 376–399 | The worked example reaching a Bug Fix verdict | [[07 - DEVELOPMENT ROADMAP#Phase 2 — Understanding what was asked\|R-06]] | ⭕ |
-| T-14 | Turn raw scores into High, Medium, and Low bands | Lines 401–409 | The threshold table at 80 and 60 percent | [[07 - DEVELOPMENT ROADMAP#Phase 2 — Understanding what was asked\|R-07]] | ⭕ |
-| T-15 | Show the low-confidence message and a manual type picker | Lines 411–419 | The fallback wording and why it matters without AI | [[07 - DEVELOPMENT ROADMAP#Phase 2 — Understanding what was asked\|R-07]] | ⭕ |
-| T-16 | Write the section recipes for the four documented task types | Lines 427–472 | Bug-fix, feature, code-review, and research heading lists | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-08]] | ⭕ |
-| T-17 | Make Light polish the wording only | Lines 480–498 | The before-and-after example turning three words into one clear sentence | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-09]] | ⭕ |
-| T-18 | Make Standard add the useful middle structure | Lines 500–517 | The three-part example output | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-09]] | ⭕ |
-| T-19 | Make Detailed lay out the complete skeleton | Lines 519–553 | The seven-part example, plus the warning against forcing one structure on everything | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-09]] | ⭕ |
-| T-20 | Agree the one shape every template shares | Lines 576–602 | The bug-fix template definition: identity, category, sections per strength | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-10]] | ⭕ |
-| T-21 | Write the six development templates | Lines 561–569 | Bug-fix through documentation, the fully named group | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-10]] | ⭕ |
-| T-22 | Build the chooser that fetches the right template | Lines 161–168, 557–560 | The resolver's slot in the layout and its duty | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-10]] | ⭕ |
-| T-23 | Build the writer that turns filled sections into clean markdown | Lines 607–638 | The input-object-to-output-text example and the separation rule | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-11]] | ⭕ |
+| T-08 | Recognise the doing-word at the front of an instruction | Lines 291–307 | The eleven action words from add to compare | [[07 - DEVELOPMENT ROADMAP#Phase 2 — Understanding what was asked\|R-04]] | ✅ |
+| T-09 | Pick out the protective phrases | Lines 309–322 | The eight limit phrases such as don't change and preserve | [[07 - DEVELOPMENT ROADMAP#Phase 2 — Understanding what was asked\|R-04]] | ✅ |
+| T-10 | Spot named technologies against a fixed list | Lines 324–347 | The fourteen-entry starter dictionary and the worked example | [[07 - DEVELOPMENT ROADMAP#Phase 2 — Understanding what was asked\|R-04]] | ✅ |
+| T-11 | Give the three word lists their own homes in the engine folder | Lines 142–148 | The named files for keywords, technologies, and constraints | [[07 - DEVELOPMENT ROADMAP#Phase 2 — Understanding what was asked\|R-05]] | ✅ |
+| T-12 | Give every task type its own weights table | Lines 361–374 | The bug-fix signal table: bug worth 5, fix worth 3, and so on | [[07 - DEVELOPMENT ROADMAP#Phase 2 — Understanding what was asked\|R-06]] | ✅ |
+| T-13 | Add up the scores and pick the winning type | Lines 376–399 | The worked example reaching a Bug Fix verdict | [[07 - DEVELOPMENT ROADMAP#Phase 2 — Understanding what was asked\|R-06]] | ✅ |
+| T-14 | Turn raw scores into High, Medium, and Low bands | Lines 401–409 | The threshold table at 80 and 60 percent | [[07 - DEVELOPMENT ROADMAP#Phase 2 — Understanding what was asked\|R-07]] | ✅ |
+| T-15 | Show the low-confidence message and a manual type picker | Lines 411–419 | The engine-side fallback/result is complete; the message and manual picker remain later UI scope | [[07 - DEVELOPMENT ROADMAP#Phase 2 — Understanding what was asked\|R-07]] | ✅ |
+| T-16 | Write the section recipes for the four documented task types | Lines 427–472 | Bug-fix, feature, code-review, and research heading lists | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-08]] | ✅ |
+| T-17 | Make Light polish the wording only | Lines 480–498 | The before-and-after example turning three words into one clear sentence | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-09]] | ✅ |
+| T-18 | Make Standard add the useful middle structure | Lines 500–517 | The three-part example output | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-09]] | ✅ |
+| T-19 | Make Detailed lay out the complete skeleton | Lines 519–553 | The seven-part example, plus the warning against forcing one structure on everything | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-09]] | ✅ |
+| T-20 | Agree the one shape every template shares | Lines 576–602 | The bug-fix template definition: identity, category, sections per strength | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-10]] | ✅ |
+| T-21 | Write the six development templates | Lines 561–569 | Bug-fix through documentation, the fully named group | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-10]] | ✅ |
+| T-22 | Build the chooser that fetches the right template | Lines 161–168, 557–560 | The resolver's slot in the layout and its duty | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-10]] | ✅ |
+| T-23 | Build the writer that turns filled sections into clean markdown | Lines 607–638 | The input-object-to-output-text example and the separation rule | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-11]] | ✅ |
 | T-24 | Assemble the input panel | Lines 646–667 | The left-panel sketch: text box, two pickers, tick-list, button | [[07 - DEVELOPMENT ROADMAP#Phase 4 — The workspace people use\|R-12]] | ⭕ |
 | T-25 | Wire up the suggested interface pieces | Lines 688–702 | The eleven ready-made screen pieces named in the material, card through dropdown menu | [[07 - DEVELOPMENT ROADMAP#Phase 4 — The workspace people use\|R-12]] | ⭕ |
 | T-26 | Build the result side | Lines 669–686 | The right-panel sketch: two tabs and the four action buttons | [[07 - DEVELOPMENT ROADMAP#Phase 4 — The workspace people use\|R-13]] | ⭕ |
