@@ -81,7 +81,7 @@ injects a native revisioned service worker, and supports the `/prompt-enhancer` 
 |---|---|
 | `npm run verify:engine` | 166/166 passed, including 120/120 authored dataset cases |
 | `npm run verify:product` | 9/9 passed |
-| `npm run verify:performance` | p95 remained below 5 ms in recorded runs; target is <100 ms |
+| `npm run verify:performance` | Latest p95 was `6.44 ms`; recorded runs stayed below 7 ms against the <100 ms target |
 | TypeScript and scoped Biome | Passed |
 | `npm run build` | Passed with the frozen template routes present |
 | `npm run build:static` | Root and `/prompt-enhancer` artifacts passed route, asset, worker, and no-template checks |

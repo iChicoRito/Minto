@@ -2,7 +2,7 @@
 title: Phase 6 Control and Trust and Phase 7 Validation and Shipping
 status: blocked
 created_at: 2026-08-22T10:54:28+08:00
-updated_at: 2026-08-22T12:36:01+08:00
+updated_at: 2026-08-22T12:42:00+08:00
 ---
 
 # Phase 6 Control and Trust and Phase 7 Validation and Shipping Implementation Plan
@@ -375,8 +375,8 @@ builds but is absent from the shipping artifact.
 - Tasks 1–7 implementation work is present; the frozen `src/app/(template)/` subtree remains unchanged.
 - `npm run verify:engine`: `166` checks passed, including `120/120` dataset cases.
 - `npm run verify:product`: `9/9` passed.
-- `npm run verify:performance` ran three times earlier and once again after the final release changes; all p95 values
-  were below 100 ms (`3.87 ms`, `3.90 ms`, `2.86 ms`, `4.79 ms`).
+- `npm run verify:performance` ran three times earlier and twice again after the final release changes; all p95 values
+  were below 100 ms (`3.87 ms`, `3.90 ms`, `2.86 ms`, `4.79 ms`, `6.44 ms`).
 - `npx tsc -p tsconfig.engine.json --noEmit`, `npx tsc --noEmit`, scoped Biome, engine purity checks, and
   `git diff --check` passed.
 - `npm run build` passed with the normal template routes. `npm run build:static` passed at the

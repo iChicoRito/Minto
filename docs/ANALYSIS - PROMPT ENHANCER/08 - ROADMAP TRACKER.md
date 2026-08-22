@@ -78,7 +78,7 @@ Work began on 21 August 2026 — see [[13 - REVISION LOG]]. One item was found a
 | # | What gets built | Status | Notes |
 |---|---|---|---|
 | R-25 | Engine test suite and the 100–200 example dataset | ✅ Finished | `verify-engine` passes `166/166`, including `120/120` dataset cases; product verification passes `9/9`. |
-| R-26 | The speed target: under a tenth of a second, on-demand recalculation | ✅ Finished | Three benchmark passes reported p95 values under 4 ms; the latest measured p95 was `4.79 ms`. |
+| R-26 | The speed target: under a tenth of a second, on-demand recalculation | ✅ Finished | Recorded p95 values stayed below 7 ms; the latest measured p95 was `6.44 ms` against the `<100 ms` target. |
 | R-27 | Offline support and installability | ✅ Finished | Static manifest, native service worker, revisioned precache, local-only runtime behavior, and `.nojekyll` are shipped. |
 | R-28 | Putting the finished app on a static host | ❌ Blocked | The implementation and artifact checks pass, but Pages workflow run #1 stopped at `Configure Pages`; the repository Pages API is not configured yet. |
 
