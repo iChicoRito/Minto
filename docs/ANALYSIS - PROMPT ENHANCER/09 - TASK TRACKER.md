@@ -10,8 +10,8 @@ Every task here names where it came from. A task with no traceable origin is not
 
 | Status | How many |
 |---|---|
-| ✅ Finished | 21 |
-| 🟨 Being worked on | 16 |
+| ✅ Finished | 37 |
+| 🟨 Being worked on | 0 |
 | ⭕ Not started | 18 |
 | ❌ Blocked | 0 |
 | 🔵 Already there | 2 |
@@ -46,22 +46,22 @@ Every task here names where it came from. A task with no traceable origin is not
 | T-21 | Write the six development templates | Lines 561–569 | Bug-fix through documentation, the fully named group | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-10]] | ✅ |
 | T-22 | Build the chooser that fetches the right template | Lines 161–168, 557–560 | The resolver's slot in the layout and its duty | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-10]] | ✅ |
 | T-23 | Build the writer that turns filled sections into clean markdown | Lines 607–638 | The input-object-to-output-text example and the separation rule | [[07 - DEVELOPMENT ROADMAP#Phase 3 — Turning understanding into structure\|R-11]] | ✅ |
-| T-24 | Assemble the input panel | Lines 646–667 | The left-panel sketch: text box, two pickers, tick-list, button | [[07 - DEVELOPMENT ROADMAP#Phase 4 — The workspace people use\|R-12]] | 🟨 |
-| T-25 | Wire up the suggested interface pieces | Lines 688–702 | The eleven ready-made screen pieces named in the material, card through dropdown menu | [[07 - DEVELOPMENT ROADMAP#Phase 4 — The workspace people use\|R-12]] | 🟨 |
-| T-26 | Build the result side | Lines 669–686 | The right-panel sketch: two tabs and the four action buttons | [[07 - DEVELOPMENT ROADMAP#Phase 4 — The workspace people use\|R-13]] | 🟨 |
-| T-27 | Enter the seventeen starter presets in four groups | Lines 706–745 | The development, writing, research, and design lists | [[07 - DEVELOPMENT ROADMAP#Phase 4 — The workspace people use\|R-14]] | 🟨 |
-| T-28 | Make a preset click fill everything in and jump to Enhance | Lines 747–756 | The Bug Fix walkthrough: category, type, strength, sections, then navigate | [[07 - DEVELOPMENT ROADMAP#Phase 4 — The workspace people use\|R-14]] | 🟨 |
-| T-29 | Build the editing toolbar's eleven helpers | Lines 775–787 | Headings through counts, including fullscreen and undo | [[07 - DEVELOPMENT ROADMAP#Phase 4 — The workspace people use\|R-15]] | 🟨 |
-| T-30 | Put editor and preview side by side | Lines 762–773 | The two-pane layout drawing | [[07 - DEVELOPMENT ROADMAP#Phase 4 — The workspace people use\|R-15]] | 🟨 |
-| T-31 | Keep small preferences in the browser's settings storage | Lines 795–811 | The five things stored there under the one settings key | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-16]] | 🟨 |
-| T-32 | Open the big content store with its three tables | Lines 813–833 | The Dexie setup naming prompts, history, and folders | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-16]] | 🟨 |
-| T-33 | Store each enhancement automatically when history is on | Lines 838–853 | The six details kept per entry | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-17]] | 🟨 |
-| T-34 | List history under day headings with four actions | Lines 855–876 | The Today sketch; open, copy, save to library, delete | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-17]] | 🟨 |
-| T-35 | Build the library around explicitly saved prompts | Lines 880–899 | The ten abilities from save to filter, and the history distinction | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-18]] | 🟨 |
-| T-36 | Lay out the library's standing views | Lines 901–911 | All prompts, favourites, and the four subject views | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-18]] | 🟨 |
-| T-37 | Add starring to any saved prompt | Lines 888–891, 1298–1300 | The favourite ability; build-order step 15 | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-19]] | 🟨 |
-| T-38 | Let prompts be gathered into folders | Lines 815–822, 1298–1300 | The folders table in the store; build-order step 15 | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-19]] | 🟨 |
-| T-39 | Let prompts carry free-form tags | Lines 823–824, 897–899 | Tags in the store list and the library's filter ability | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-19]] | 🟨 |
+| T-24 | Assemble the input panel | Lines 646–667 | The left-panel sketch: text box, two pickers, tick-list, button | [[07 - DEVELOPMENT ROADMAP#Phase 4 — The workspace people use\|R-12]] | ✅ |
+| T-25 | Wire up the suggested interface pieces | Lines 688–702 | The eleven ready-made screen pieces named in the material, card through dropdown menu | [[07 - DEVELOPMENT ROADMAP#Phase 4 — The workspace people use\|R-12]] | ✅ |
+| T-26 | Build the result side | Lines 669–686 | The right-panel sketch: two tabs and the four action buttons | [[07 - DEVELOPMENT ROADMAP#Phase 4 — The workspace people use\|R-13]] | ✅ |
+| T-27 | Enter the seventeen starter presets in four groups | Lines 706–745 | The development, writing, research, and design lists | [[07 - DEVELOPMENT ROADMAP#Phase 4 — The workspace people use\|R-14]] | ✅ |
+| T-28 | Make a preset click fill everything in and jump to Enhance | Lines 747–756 | The Bug Fix walkthrough: category, type, strength, sections, then navigate | [[07 - DEVELOPMENT ROADMAP#Phase 4 — The workspace people use\|R-14]] | ✅ |
+| T-29 | Build the editing toolbar's eleven helpers | Lines 775–787 | Headings through counts, including fullscreen and undo | [[07 - DEVELOPMENT ROADMAP#Phase 4 — The workspace people use\|R-15]] | ✅ |
+| T-30 | Put editor and preview side by side | Lines 762–773 | The two-pane layout drawing | [[07 - DEVELOPMENT ROADMAP#Phase 4 — The workspace people use\|R-15]] | ✅ |
+| T-31 | Keep small preferences in the browser's settings storage | Lines 795–811 | The five things stored there under the one settings key | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-16]] | ✅ |
+| T-32 | Open the big content store with its three tables | Lines 813–833 | The Dexie setup naming prompts, history, and folders | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-16]] | ✅ |
+| T-33 | Store each enhancement automatically when history is on | Lines 838–853 | The six details kept per entry | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-17]] | ✅ |
+| T-34 | List history under day headings with four actions | Lines 855–876 | The Today sketch; open, copy, save to library, delete | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-17]] | ✅ |
+| T-35 | Build the library around explicitly saved prompts | Lines 880–899 | The ten abilities from save to filter, and the history distinction | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-18]] | ✅ |
+| T-36 | Lay out the library's standing views | Lines 901–911 | All prompts, favourites, and the four subject views | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-18]] | ✅ |
+| T-37 | Add starring to any saved prompt | Lines 888–891, 1298–1300 | The favourite ability; build-order step 15 | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-19]] | ✅ |
+| T-38 | Let prompts be gathered into folders | Lines 815–822, 1298–1300 | The folders table in the store; build-order step 15 | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-19]] | ✅ |
+| T-39 | Let prompts carry free-form tags | Lines 823–824, 897–899 | Tags in the store list and the library's filter ability | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-19]] | ✅ |
 | T-40 | Build the first three settings tabs | Lines 952–985 | General, Sections, and Appearance contents | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-20]] | ⭕ |
 | T-41 | Add the data tab: cap, backups, and wipe buttons | Lines 987–1001 | The data-tab sketch with the 500 cap and three clearing controls | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-20]] | ⭕ |
 | T-42 | Write the whole collection out as one backup file | Lines 918–936 | The file `prompt-enhancer-backup.json` and its four parts, version first | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-21]] | ⭕ |

@@ -8,8 +8,8 @@
 
 | Status | How many |
 |---|---|
-| ✅ Finished | 10 |
-| 🟨 Being worked on | 8 |
+| ✅ Finished | 18 |
+| 🟨 Being worked on | 0 |
 | ⭕ Not started | 9 |
 | ❌ Blocked | 0 |
 | 🔵 Already there | 1 |
@@ -17,7 +17,7 @@
 | ❓ Unclear | 0 |
 | **Total** | **28** |
 
-Work began on 21 August 2026 — see [[13 - REVISION LOG]]. One item was found already standing in the working repository files, nine more roadmap items were built and checked in Phase 2–3, and eight workspace/memory implementations are now in local `main` pending browser acceptance. Phase 6–7 remain.
+Work began on 21 August 2026 — see [[13 - REVISION LOG]]. One item was found already standing in the working repository files, nine more roadmap items were built and checked in Phase 2–3, and eight workspace/memory implementations are now finished in local `main` after user browser verification. Phase 6–7 remain.
 
 ## Phase 1 — Foundations and the shape of the data
 
@@ -49,19 +49,19 @@ Work began on 21 August 2026 — see [[13 - REVISION LOG]]. One item was found a
 
 | # | What gets built | Status | Notes |
 |---|---|---|---|
-| R-12 | The Enhance page input panel | 🟨 Being worked on | Input, controls, section selection, stale-result handling, and explicit Enhance flow are implemented; browser acceptance remains. |
-| R-13 | The result side: two tabs, four actions | 🟨 Being worked on | Result/Preview/Edit, Copy, Save, and Markdown Export are implemented; Save commits to the Phase 5 library; browser acceptance remains. |
-| R-14 | Seventeen starter presets that pre-fill and jump to Enhance | 🟨 Being worked on | The 17 named presets are authoritative; unmatched labels map to the closest existing task type; browser acceptance remains. |
-| R-15 | The markdown editor with toolbar and live preview | 🟨 Being worked on | Controlled Markdown editing, safe preview, toolbar transforms, fullscreen, undo/reset, and counts are implemented; browser acceptance remains. |
+| R-12 | The Enhance page input panel | ✅ Finished | Input, controls, section selection, stale-result handling, and explicit Enhance flow are implemented and user-verified in a browser. |
+| R-13 | The result side: two tabs, four actions | ✅ Finished | Result/Preview/Edit, Copy, Save, and Markdown Export are implemented; Save commits to the Phase 5 library; user-verified in a browser. |
+| R-14 | Seventeen starter presets that pre-fill and jump to Enhance | ✅ Finished | The 17 named presets are authoritative; unmatched labels map to the closest existing task type; user-verified in a browser. |
+| R-15 | The markdown editor with toolbar and live preview | ✅ Finished | Controlled Markdown editing, safe preview, toolbar transforms, fullscreen, undo/reset, and counts are implemented and user-verified in a browser. |
 
 ## Phase 5 — Giving the app a memory
 
 | # | What gets built | Status | Notes |
 |---|---|---|---|
-| R-16 | The two stores: preference drawer and content store via Dexie | 🟨 Being worked on | Existing preference layers now hold prompt defaults/history enabled; Dexie v1 owns history, prompts, and folders; browser acceptance remains. |
-| R-17 | Automatic history under day headings with four actions | 🟨 Being worked on | Successful Enhances create immutable history, with actions, Clear History, fixed 500-entry retention, and local export; browser acceptance remains. |
-| R-18 | The library of deliberately saved prompts | 🟨 Being worked on | Explicit Save creates/updates independent saved prompts with CRUD, search, filters, and standing views; browser acceptance remains. |
-| R-19 | Favourites, folders, and tags | 🟨 Being worked on | Saved prompts support favourites, one-level folders, normalized tags, and AND tag filtering; browser acceptance remains. |
+| R-16 | The two stores: preference drawer and content store via Dexie | ✅ Finished | Existing preference layers now hold prompt defaults/history enabled; Dexie v1 owns history, prompts, and folders; user-verified in a browser. |
+| R-17 | Automatic history under day headings with four actions | ✅ Finished | Successful Enhances create immutable history, with actions, Clear History, fixed 500-entry retention, and local export; user-verified in a browser. |
+| R-18 | The library of deliberately saved prompts | ✅ Finished | Explicit Save creates/updates independent saved prompts with CRUD, search, filters, and standing views; user-verified in a browser. |
+| R-19 | Favourites, folders, and tags | ✅ Finished | Saved prompts support favourites, one-level folders, normalized tags, and AND tag filtering; user-verified in a browser. |
 
 ## Phase 6 — Control, trust, and every screen size
 
@@ -84,8 +84,8 @@ Work began on 21 August 2026 — see [[13 - REVISION LOG]]. One item was found a
 
 ## What is blocked
 
-No product implementation is blocked. R-12 through R-19 are implemented in local `main` and remain 🟨 only because the
-manual browser acceptance matrix has not run in the current environment; Phase 6–7 still wait their planned turn.
+No product implementation is blocked. R-12 through R-19 are implemented in local `main` and user-verified in a browser;
+a complete four-browser matrix is not recorded, and Phase 6–7 still wait their planned turn.
 
 ## Status legend
 

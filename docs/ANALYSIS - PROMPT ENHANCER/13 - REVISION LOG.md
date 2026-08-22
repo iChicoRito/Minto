@@ -52,13 +52,19 @@ Fresh automated evidence from the acceptance pass:
 | Production HTTP smoke | `/`, `/presets`, `/history`, `/library` returned HTTP 200 |
 | Frozen subtree/package-lock/config audit | No changes detected |
 
-The four-browser IndexedDB/UI acceptance matrix is not claimed complete: this Windows execution environment exposes no
-Chrome, Edge, Firefox, Safari, or browser automation runner. Roadmap items R-12 through R-19 and tasks T-24 through T-39
-remain 🟨 until that manual matrix is run.
+The four-browser IndexedDB/UI acceptance matrix was not claimed complete during the implementation pass because this
+Windows execution environment exposed no Chrome, Edge, Firefox, Safari, or browser automation runner. User browser
+verification was recorded in the follow-up entry below.
 
 ### 22 August 2026 — Phases 4 and 5 merged into local main
 
 The implementation commit `1cf1528` (`feat: add workspace and browser memory`) was fast-forwarded into local `main`.
 The merge preserved the pre-existing uncommitted plan and prompt files in the main working tree. Local `main` now
-contains the Phase 1–5 implementation; Phase 4–5 remain 🟨 in the trackers only for the outstanding manual browser
-acceptance matrix. Nothing was pushed or deployed.
+contains the Phase 1–5 implementation; the trackers now record Phase 4–5 as ✅ after the user's browser verification.
+The broader four-browser matrix is not recorded. Nothing was pushed or deployed.
+
+### 22 August 2026 — User browser verification recorded
+
+The user confirmed that the combined Phase 4–5 flow works in their browser. The roadmap and task trackers therefore
+promote R-12 through R-19 and T-24 through T-39 from 🟨 to ✅. This is user-reported browser smoke verification; a
+complete Chrome/Edge/Firefox/Safari matrix remains unrecorded.

@@ -78,17 +78,17 @@ Things the material does not settle. Each one is a real gap, not a guess dressed
 | Phase 1 — Foundations | ✅ Implemented | App shell, routes, shared types, and engine vocabulary exist. |
 | Phase 2 — Understanding | ✅ Implemented | Parser, signal extraction, weighted classifier, confidence bands, and General fallback exist. |
 | Phase 3 — Structure | ✅ Implemented | Rules, templates, strength behavior, Markdown generation, and the public facade exist. |
-| Phase 4 — Workspace | 🟨 Implemented; acceptance pending | Enhance workspace, 17 presets, result/preview/edit flow, Markdown editor, Copy, and Export are in local `main`. |
-| Phase 5 — Browser memory | 🟨 Implemented; acceptance pending | Dexie history/library, folders, tags, retention, Clear History, and JSON export are in local `main`. |
+| Phase 4 — Workspace | ✅ Implemented | Enhance workspace, 17 presets, result/preview/edit flow, Markdown editor, Copy, and Export are in local `main`; the user verified the flow in a browser. |
+| Phase 5 — Browser memory | ✅ Implemented | Dexie history/library, folders, tags, retention, Clear History, and JSON export are in local `main`; the user verified the flow in a browser. |
 | Phase 6 — Control and trust | ⭕ Not started | Settings/data controls, edge-case handling, privacy surfaces, and full responsive work remain. |
 | Phase 7 — Proving and shipping | ⭕ Not started | Broader test data, performance, offline/installability, and static deployment remain. |
 
-Phase 4–5 automated and static checks pass. The remaining acceptance gate is the manual browser matrix for IndexedDB,
-security, accessibility, and failure behavior.
+Phase 4–5 automated and static checks pass, and the user has verified the flow in a browser. A complete four-browser
+matrix for IndexedDB, security, accessibility, and failure behavior is not recorded yet.
 
 ## Questions since answered
 
-Phase 2–3 settled Q-02 and Q-03 while preserving their original wording here for traceability. The Phase 4–5 implementation settled Q-01 by treating the 17 enumerated names as authoritative and mapping unmatched labels to the closest existing recipe without expanding the 13-type taxonomy. It settled Q-05 as a fixed newest-500 history limit and pulled Clear History/export forward for the normal release. Browser acceptance remains before these roadmap items can be marked finished. Q-02 uses the approved margin × evidence-floor formula: `confidence = round(min(margin, evidence))`, with `EVIDENCE_SATURATION = 7` and bands of ≥80 High, 60–79 Medium, and <60 Low. C-02 is a printed-weight arithmetic erratum; the implementation does not retune the weights to reach 11. Q-03 is settled by nine authored recipes for the previously unlisted task types. The engine tie rule is recorded with R-07; full conflict display remains Phase 6 work.
+Phase 2–3 settled Q-02 and Q-03 while preserving their original wording here for traceability. The Phase 4–5 implementation settled Q-01 by treating the 17 enumerated names as authoritative and mapping unmatched labels to the closest existing recipe without expanding the 13-type taxonomy. It settled Q-05 as a fixed newest-500 history limit and pulled Clear History/export forward for the normal release. The user has since verified the Phase 4–5 flow in a browser; a complete four-browser matrix is not recorded. Q-02 uses the approved margin × evidence-floor formula: `confidence = round(min(margin, evidence))`, with `EVIDENCE_SATURATION = 7` and bands of ≥80 High, 60–79 Medium, and <60 Low. C-02 is a printed-weight arithmetic erratum; the implementation does not retune the weights to reach 11. Q-03 is settled by nine authored recipes for the previously unlisted task types. The engine tie rule is recorded with R-07; full conflict display remains Phase 6 work.
 
 | # | Question | Resolution |
 |---|---|---|
@@ -99,4 +99,4 @@ Phase 2–3 settled Q-02 and Q-03 while preserving their original wording here f
 
 ## What changed
 
-Revised four times. On 21 August 2026 work began on the build itself: Phase 1 was implemented, both trackers were brought level with the code, and one piece of this vault's own arithmetic was corrected along the way. On 22 August 2026 the Phase 2–3 engine pipeline was completed and Q-02/Q-03 were settled without changing the material or later-phase scope. The Phase 4–5 implementation is now present in local `main` and its automated/static gates pass; browser acceptance is still pending. The record lives in [[13 - REVISION LOG]].
+Revised five times. On 21 August 2026 work began on the build itself: Phase 1 was implemented, both trackers were brought level with the code, and one piece of this vault's own arithmetic was corrected along the way. On 22 August 2026 the Phase 2–3 engine pipeline was completed and Q-02/Q-03 were settled without changing the material or later-phase scope. The Phase 4–5 implementation is now present in local `main`, its automated/static gates pass, and the user has verified the flow in a browser. The record lives in [[13 - REVISION LOG]].

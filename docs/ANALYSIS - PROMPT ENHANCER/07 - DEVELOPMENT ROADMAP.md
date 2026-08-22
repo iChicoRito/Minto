@@ -100,7 +100,7 @@ The picture of this order lives in [[06 - DIAGRAMS#5. The order of the phases|Di
 
 ## Phase 4 — The workspace people use
 
-**Current state:** Implemented in local `main`; manual browser acceptance remains.
+**Current state:** Finished in local `main`; the user verified the workspace flow in a browser.
 
 **The goal:** The product becomes visible: a person can type, enhance, preview, edit, and copy, with presets to skip the guesswork.
 
@@ -128,7 +128,7 @@ those labels to the closest existing recipe without expanding the 13-type engine
 
 ## Phase 5 — Giving the app a memory
 
-**Current state:** Implemented in local `main`; manual browser acceptance remains.
+**Current state:** Finished in local `main`; the user verified the browser-memory flow in a browser.
 
 **The goal:** Enhancements stop vanishing: history keeps them automatically, and deliberately saved prompts gather in a library with favourites, folders, and tags.
 
