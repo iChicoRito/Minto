@@ -17,6 +17,7 @@
  *   npm run verify:engine
  */
 
+import { enhancePrompt } from "../prompt-engine";
 import { classifyPrompt } from "../prompt-engine/classifier/classify-prompt";
 import { generateMarkdown } from "../prompt-engine/generator/generate-markdown";
 import { parsePrompt } from "../prompt-engine/parser/parse-prompt";
@@ -25,7 +26,14 @@ import { selectSections } from "../prompt-engine/rules/select-sections";
 import { TEMPLATE_REGISTRY } from "../prompt-engine/templates/registry";
 import { resolveTemplate } from "../prompt-engine/templates/resolve-template";
 import type { PromptTemplate, SectionId } from "../prompt-engine/templates/template-types";
-import { CLASSIFIER_CASES, GENERATOR_CASES, PARSER_CASES, RULES_CASES, TEMPLATE_CASES } from "./verify-cases";
+import {
+  CLASSIFIER_CASES,
+  GENERATOR_CASES,
+  PARSER_CASES,
+  PIPELINE_CASES,
+  RULES_CASES,
+  TEMPLATE_CASES,
+} from "./verify-cases";
 import assert from "node:assert/strict";
 
 /** Case-table item shapes, derived from ./verify-cases. */
@@ -34,6 +42,7 @@ type ClassifierCase = (typeof CLASSIFIER_CASES)[number];
 type TemplateCase = (typeof TEMPLATE_CASES)[number];
 type RulesCase = (typeof RULES_CASES)[number];
 type GeneratorCase = (typeof GENERATOR_CASES)[number];
+type PipelineCase = (typeof PIPELINE_CASES)[number];
 
 /** One recorded failure, echoed immediately and listed again in the summary. */
 type Failure = {
@@ -339,6 +348,50 @@ function verifyGeneratorCase(testCase: GeneratorCase, failures: Failure[]): void
   }
 }
 
+/** Verifies the public pipeline's analysis contract, output structure, and no-throw behavior. */
+function verifyPipelineCase(testCase: PipelineCase, failures: Failure[]): void {
+  let firstRun: ReturnType<typeof enhancePrompt>;
+  let secondRun: ReturnType<typeof enhancePrompt>;
+
+  try {
+    firstRun = enhancePrompt(testCase.input, testCase.level === undefined ? undefined : { level: testCase.level });
+    secondRun = enhancePrompt(testCase.input, testCase.level === undefined ? undefined : { level: testCase.level });
+  } catch (error) {
+    recordFailure(failures, "pipeline", testCase.name, [error instanceof Error ? error.message : String(error)]);
+    return;
+  }
+
+  if (JSON.stringify(firstRun) !== JSON.stringify(secondRun)) {
+    recordFailure(failures, "pipeline", `${testCase.name} (determinism)`, [
+      `run 1: ${JSON.stringify(firstRun)}`,
+      `run 2: ${JSON.stringify(secondRun)}`,
+    ]);
+    return;
+  }
+
+  try {
+    assert.deepStrictEqual(firstRun.analysis, testCase.expectedAnalysis);
+    if (testCase.expectedMarkdown !== undefined) {
+      assert.strictEqual(firstRun.markdown, testCase.expectedMarkdown);
+    }
+    if (testCase.expectedHeadings !== undefined) {
+      const headings = firstRun.markdown.split("\n").filter((line) => line.startsWith("#"));
+      assert.deepStrictEqual(headings, testCase.expectedHeadings);
+    }
+    if (testCase.input.trim().length > 0) {
+      assert.ok(firstRun.markdown.length > 0, "non-empty input must produce non-empty Markdown");
+    }
+  } catch (error) {
+    recordFailure(failures, "pipeline", testCase.name, [
+      error instanceof Error ? error.message : String(error),
+      `expected analysis: ${JSON.stringify(testCase.expectedAnalysis)}`,
+      `got analysis:      ${JSON.stringify(firstRun.analysis)}`,
+      `expected Markdown: ${JSON.stringify(testCase.expectedMarkdown)}`,
+      `got Markdown:      ${JSON.stringify(firstRun.markdown)}`,
+    ]);
+  }
+}
+
 function main(): void {
   const failures: Failure[] = [];
   const sections: SectionResult[] = [
@@ -347,6 +400,7 @@ function main(): void {
     runTemplatesSection(failures),
     runSection("rules", RULES_CASES, verifyRulesCase, failures),
     runSection("generator", GENERATOR_CASES, verifyGeneratorCase, failures),
+    runSection("pipeline", PIPELINE_CASES, verifyPipelineCase, failures),
   ];
 
   for (const section of sections) {

@@ -14,7 +14,7 @@
  */
 import type { ConfidenceBand } from "../prompt-engine/classifier/to-confidence";
 import type { SectionId } from "../prompt-engine/templates/template-types";
-import type { EnhancementLevel, PromptCategory, PromptTaskType } from "../prompt-engine/types";
+import type { EnhancementLevel, PromptAnalysis, PromptCategory, PromptTaskType } from "../prompt-engine/types";
 
 /**
  * Parser cases: raw input → exact expected ParsedPrompt.
@@ -446,5 +446,158 @@ export const GENERATOR_CASES: ReadonlyArray<GeneratorCase> = [
     },
     level: "light",
     expectedMarkdown: "Investigate and resolve the issue.",
+  },
+];
+
+/** End-to-end pipeline cases: public entrypoint input → analysis and Markdown. */
+export type PipelineCase = {
+  name: string;
+  input: string;
+  level?: EnhancementLevel;
+  expectedAnalysis: PromptAnalysis;
+  expectedMarkdown?: string;
+  expectedHeadings?: string[];
+};
+
+export const PIPELINE_CASES: ReadonlyArray<PipelineCase> = [
+  {
+    name: "light enhancement matches material sentence",
+    input: "fix login problem",
+    level: "light",
+    expectedAnalysis: {
+      original: "fix login problem",
+      category: "general",
+      taskType: "general",
+      confidence: 43,
+      action: "fix",
+      subject: "login problem",
+      domain: "authentication",
+      technologies: [],
+      constraints: [],
+      requirements: ["Fix login problem"],
+      enhancementLevel: "light",
+    },
+    expectedMarkdown: "Investigate and resolve the login problem while preserving existing authentication behavior.",
+  },
+  {
+    name: "standard enhancement uses the default level",
+    input: "fix login problem",
+    expectedAnalysis: {
+      original: "fix login problem",
+      category: "general",
+      taskType: "general",
+      confidence: 43,
+      action: "fix",
+      subject: "login problem",
+      domain: "authentication",
+      technologies: [],
+      constraints: [],
+      requirements: ["Fix login problem"],
+      enhancementLevel: "standard",
+    },
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "Resolve the login problem.",
+      "",
+      "## Requirements",
+      "",
+      "- Fix login problem",
+      "",
+      "## Verification",
+      "",
+      "Confirm that the login problem is resolved.",
+    ].join("\n"),
+    expectedHeadings: ["# Objective", "## Requirements", "## Verification"],
+  },
+  {
+    name: "detailed enhancement keeps current template order and constraints",
+    input: "Fix broken login. Don't change email authentication.",
+    level: "detailed",
+    expectedAnalysis: {
+      original: "Fix broken login. Don't change email authentication.",
+      category: "development",
+      taskType: "bug-fix",
+      confidence: 100,
+      action: "fix",
+      subject: "broken login",
+      domain: "authentication",
+      technologies: [],
+      constraints: ["Don't change email authentication"],
+      requirements: ["Fix broken login"],
+      enhancementLevel: "detailed",
+    },
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "Resolve the broken login.",
+      "",
+      "## Problem",
+      "",
+      "Address the broken login.",
+      "",
+      "## Scope",
+      "",
+      "Limit the work to the broken login.",
+      "",
+      "## Requirements",
+      "",
+      "- Fix broken login",
+      "",
+      "## Constraints",
+      "",
+      "- Don't change email authentication",
+      "",
+      "## Verification",
+      "",
+      "Confirm that the broken login is resolved.",
+    ].join("\n"),
+    expectedHeadings: ["# Objective", "## Problem", "## Scope", "## Requirements", "## Constraints", "## Verification"],
+  },
+  {
+    name: "low-confidence classification falls back to General",
+    input: "There is an issue with the export flow",
+    expectedAnalysis: {
+      original: "There is an issue with the export flow",
+      category: "general",
+      taskType: "general",
+      confidence: 29,
+      action: undefined,
+      subject: undefined,
+      domain: undefined,
+      technologies: [],
+      constraints: [],
+      requirements: [],
+      enhancementLevel: "standard",
+    },
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "There is an issue with the export flow.",
+      "",
+      "## Verification",
+      "",
+      "Confirm that the requested outcome is complete.",
+    ].join("\n"),
+    expectedHeadings: ["# Objective", "## Verification"],
+  },
+  {
+    name: "empty input is classified and rendered without throwing",
+    input: "  \t",
+    expectedAnalysis: {
+      original: "  \t",
+      category: "general",
+      taskType: "general",
+      confidence: 0,
+      action: undefined,
+      subject: undefined,
+      domain: undefined,
+      technologies: [],
+      constraints: [],
+      requirements: [],
+      enhancementLevel: "standard",
+    },
+    expectedMarkdown: "",
+    expectedHeadings: [],
   },
 ];
