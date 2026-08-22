@@ -11,8 +11,10 @@ import {
   SIDEBAR_COLLAPSIBLE_VALUES,
   SIDEBAR_VARIANT_VALUES,
 } from "@/lib/preferences/layout";
+import { parsePromptSections } from "@/lib/preferences/prompt-preferences";
 import { THEME_MODE_VALUES, THEME_PRESET_VALUES } from "@/lib/preferences/theme";
 import { applyThemeMode, subscribeToSystemTheme } from "@/lib/preferences/theme-utils";
+import type { EnhancementLevel } from "@/prompt-engine/types";
 
 import { createPreferencesStore, type PreferencesState } from "./preferences-store";
 
@@ -40,6 +42,13 @@ function readDomState(): Partial<PreferencesState> {
     navbarStyle: getSafeValue(root.getAttribute("data-navbar-style"), NAVBAR_STYLE_VALUES),
     sidebarVariant: getSafeValue(root.getAttribute("data-sidebar-variant"), SIDEBAR_VARIANT_VALUES),
     sidebarCollapsible: getSafeValue(root.getAttribute("data-sidebar-collapsible"), SIDEBAR_COLLAPSIBLE_VALUES),
+    defaultEnhancementLevel: getSafeValue(root.getAttribute("data-default-enhancement-level"), [
+      "light",
+      "standard",
+      "detailed",
+    ] as const),
+    defaultPromptSections: parsePromptSections(root.getAttribute("data-default-prompt-sections")),
+    historyEnabled: root.getAttribute("data-history-enabled") !== "false",
   };
 }
 
@@ -50,6 +59,9 @@ export const PreferencesStoreProvider = ({
   font,
   contentLayout,
   navbarStyle,
+  defaultEnhancementLevel,
+  defaultPromptSections,
+  historyEnabled,
 }: {
   children: React.ReactNode;
   themeMode: PreferencesState["themeMode"];
@@ -57,6 +69,9 @@ export const PreferencesStoreProvider = ({
   font: PreferencesState["font"];
   contentLayout: PreferencesState["contentLayout"];
   navbarStyle: PreferencesState["navbarStyle"];
+  defaultEnhancementLevel: EnhancementLevel;
+  defaultPromptSections: PreferencesState["defaultPromptSections"];
+  historyEnabled: boolean;
 }) => {
   const [store] = useState<StoreApi<PreferencesState>>(() =>
     createPreferencesStore({
@@ -65,6 +80,9 @@ export const PreferencesStoreProvider = ({
       font,
       contentLayout,
       navbarStyle,
+      defaultEnhancementLevel,
+      defaultPromptSections,
+      historyEnabled,
     }),
   );
 

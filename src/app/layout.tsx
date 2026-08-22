@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { APP_CONFIG } from "@/config/app-config";
 import { fontVars } from "@/lib/fonts/registry";
 import { PREFERENCE_DEFAULTS } from "@/lib/preferences/preferences-config";
+import { parsePromptSections } from "@/lib/preferences/prompt-preferences";
 import { ThemeBootScript } from "@/scripts/theme-boot";
 import { PreferencesStoreProvider } from "@/stores/preferences/preferences-provider";
 
@@ -18,8 +19,18 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  const { theme_mode, theme_preset, content_layout, navbar_style, sidebar_variant, sidebar_collapsible, font } =
-    PREFERENCE_DEFAULTS;
+  const {
+    theme_mode,
+    theme_preset,
+    content_layout,
+    navbar_style,
+    sidebar_variant,
+    sidebar_collapsible,
+    font,
+    default_enhancement_level,
+    default_prompt_sections,
+    history_enabled,
+  } = PREFERENCE_DEFAULTS;
   return (
     <html
       lang="en"
@@ -30,6 +41,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       data-sidebar-variant={sidebar_variant}
       data-sidebar-collapsible={sidebar_collapsible}
       data-font={font}
+      data-default-enhancement-level={default_enhancement_level}
+      data-default-prompt-sections={default_prompt_sections}
+      data-history-enabled={history_enabled}
       suppressHydrationWarning
     >
       <head>
@@ -44,6 +58,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             contentLayout={content_layout}
             navbarStyle={navbar_style}
             font={font}
+            defaultEnhancementLevel={default_enhancement_level}
+            defaultPromptSections={parsePromptSections(default_prompt_sections)}
+            historyEnabled={history_enabled === "true"}
           >
             {children}
             <Toaster />

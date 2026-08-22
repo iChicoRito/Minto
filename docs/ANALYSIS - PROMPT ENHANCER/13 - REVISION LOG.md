@@ -31,3 +31,27 @@ The parser-to-Markdown milestone was implemented beside these notes, following t
 The open points were reconciled without changing the later-phase boundary. Q-02 is settled by the margin × evidence-floor formula with `EVIDENCE_SATURATION = 7` and bands of ≥80 High, 60–79 Medium, and <60 Low. C-02 is retained as a printed-weight arithmetic erratum: the printed weights stand, and the implementation does not retune them to produce score 11. Q-03 is settled by the nine authored recipes. D4's engine tie behavior reports the low-confidence General fallback; the full conflict-display UI remains Phase 6 work. R-07 and T-15 therefore record the engine-side result only; the picker and message UI remain later scope.
 
 Evidence from the completion pass: `npm run verify:engine` passed 44/44 twice with byte-identical output, and the required type-check, purity, scoped Biome, build, static-route, frozen-template, and preset-metadata checks passed as recorded in the execution log.
+
+### 22 August 2026 — Phases 4 and 5 implementation pass
+
+The combined workspace and browser-local memory implementation is now present in the isolated execution worktree. The
+Phase 3 public facade was extended first with manual task-type/section controls and resolved output, then the workspace,
+17-preset gallery, secure Markdown editor/preview, existing-preference prompt defaults, Dexie v1 history/library,
+folders/tags, fixed newest-500 retention, Clear History, and collection JSON export were added. Save remains a durable
+IndexedDB action rather than an in-memory success signal, and unavailable storage leaves the current workspace usable.
+
+Fresh automated evidence from the acceptance pass:
+
+| Check | Result |
+|---|---|
+| `npm run verify:engine` | 46/46 passed |
+| `npm run verify:product` | 6/6 passed |
+| Engine, scripts, and app TypeScript projects | Passed |
+| Scoped Biome | 37 files checked, no fixes/errors |
+| `npm run build` | Passed; `/`, `/presets`, `/history`, and `/library` static |
+| Production HTTP smoke | `/`, `/presets`, `/history`, `/library` returned HTTP 200 |
+| Frozen subtree/package-lock/config audit | No changes detected |
+
+The four-browser IndexedDB/UI acceptance matrix is not claimed complete: this Windows execution environment exposes no
+Chrome, Edge, Firefox, Safari, or browser automation runner. Roadmap items R-12 through R-19 and tasks T-24 through T-39
+remain 🟨 until that manual matrix is run.

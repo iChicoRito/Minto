@@ -1,6 +1,6 @@
 /**
  * Boot script that reads user preference values (theme mode, theme preset,
- * content layout, navbar style) from cookies or localStorage based on the
+ * content layout, navbar style, and prompt defaults from cookies or localStorage based on the
  * configured persistence mode.
  *
  * Runs early in <head> to apply the correct data attributes before hydration,
@@ -17,6 +17,9 @@ export function ThemeBootScript() {
     navbar_style: PREFERENCE_PERSISTENCE.navbar_style,
     sidebar_variant: PREFERENCE_PERSISTENCE.sidebar_variant,
     sidebar_collapsible: PREFERENCE_PERSISTENCE.sidebar_collapsible,
+    default_enhancement_level: PREFERENCE_PERSISTENCE.default_enhancement_level,
+    default_prompt_sections: PREFERENCE_PERSISTENCE.default_prompt_sections,
+    history_enabled: PREFERENCE_PERSISTENCE.history_enabled,
   });
 
   const defaults = JSON.stringify({
@@ -27,6 +30,9 @@ export function ThemeBootScript() {
     navbar_style: PREFERENCE_DEFAULTS.navbar_style,
     sidebar_variant: PREFERENCE_DEFAULTS.sidebar_variant,
     sidebar_collapsible: PREFERENCE_DEFAULTS.sidebar_collapsible,
+    default_enhancement_level: PREFERENCE_DEFAULTS.default_enhancement_level,
+    default_prompt_sections: PREFERENCE_DEFAULTS.default_prompt_sections,
+    history_enabled: PREFERENCE_DEFAULTS.history_enabled,
   });
 
   const code = `
@@ -75,8 +81,11 @@ export function ThemeBootScript() {
         var rawFont = readPreference("font", DEFAULTS.font);
         var rawContentLayout = readPreference("content_layout", DEFAULTS.content_layout);
         var rawNavbarStyle = readPreference("navbar_style", DEFAULTS.navbar_style);
-        var rawSidebarVariant = readPreference("sidebar_variant", DEFAULTS.sidebar_variant);
-        var rawSidebarCollapsible = readPreference("sidebar_collapsible", DEFAULTS.sidebar_collapsible);
+         var rawSidebarVariant = readPreference("sidebar_variant", DEFAULTS.sidebar_variant);
+         var rawSidebarCollapsible = readPreference("sidebar_collapsible", DEFAULTS.sidebar_collapsible);
+         var rawDefaultLevel = readPreference("default_enhancement_level", DEFAULTS.default_enhancement_level);
+         var rawDefaultSections = readPreference("default_prompt_sections", DEFAULTS.default_prompt_sections);
+         var rawHistoryEnabled = readPreference("history_enabled", DEFAULTS.history_enabled);
 
         var isValidMode = rawMode === "dark" || rawMode === "light" || rawMode === "system";
         var mode = isValidMode ? rawMode : DEFAULTS.theme_mode;
@@ -88,8 +97,13 @@ export function ThemeBootScript() {
         var font = rawFont || DEFAULTS.font;
         var contentLayout = rawContentLayout || DEFAULTS.content_layout;
         var navbarStyle = rawNavbarStyle || DEFAULTS.navbar_style;
-        var sidebarVariant = rawSidebarVariant || DEFAULTS.sidebar_variant;
-        var sidebarCollapsible = rawSidebarCollapsible || DEFAULTS.sidebar_collapsible;
+         var sidebarVariant = rawSidebarVariant || DEFAULTS.sidebar_variant;
+         var sidebarCollapsible = rawSidebarCollapsible || DEFAULTS.sidebar_collapsible;
+         var defaultLevel = rawDefaultLevel === "light" || rawDefaultLevel === "standard" || rawDefaultLevel === "detailed"
+           ? rawDefaultLevel
+           : DEFAULTS.default_enhancement_level;
+         var defaultSections = rawDefaultSections || DEFAULTS.default_prompt_sections;
+         var historyEnabled = rawHistoryEnabled === "false" ? "false" : "true";
 
         root.classList.toggle("dark", resolvedMode === "dark");
         root.setAttribute("data-theme-mode", mode);
@@ -97,8 +111,11 @@ export function ThemeBootScript() {
         root.setAttribute("data-font", font);
         root.setAttribute("data-content-layout", contentLayout);
         root.setAttribute("data-navbar-style", navbarStyle);
-        root.setAttribute("data-sidebar-variant", sidebarVariant);
-        root.setAttribute("data-sidebar-collapsible", sidebarCollapsible);
+         root.setAttribute("data-sidebar-variant", sidebarVariant);
+         root.setAttribute("data-sidebar-collapsible", sidebarCollapsible);
+         root.setAttribute("data-default-enhancement-level", defaultLevel);
+         root.setAttribute("data-default-prompt-sections", defaultSections);
+         root.setAttribute("data-history-enabled", historyEnabled);
 
         root.style.colorScheme = resolvedMode === "dark" ? "dark" : "light";
 

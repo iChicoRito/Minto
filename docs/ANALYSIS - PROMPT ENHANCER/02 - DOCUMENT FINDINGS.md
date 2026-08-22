@@ -81,13 +81,13 @@ Contradictions found inside the single document. Recorded, not resolved.
 
 ## What the documents leave unsaid
 
-Each gap below is carried into *Open questions* in [[00 - START HERE]] rather than filled with a guess.
+Each unresolved gap below is carried into *Open questions* in [[00 - START HERE]] rather than filled with a guess.
 
-- How the eighteen preset names map onto the thirteen defined task types — several presets, such as "API Design", "Database", and "Improve Writing", have no task type of their own (lines 706–745 against lines 238–253). Raised as Q-01.
+- How the seventeen named preset labels map onto the thirteen defined task types — **settled in Phase 4**: API Design and Database use Feature, Improve Writing uses Rewrite, Analyze Information uses Research, and UI Design/UX Review use UI Review. No new task types were added.
 - How raw scores become the percentage confidence bands — the thresholds speak in percentages, the example in a bare total, and the two are never connected (lines 401–409). Raised as Q-02.
 - Which heading layouts apply to the nine task types whose sections are never listed — recipes exist for only four of the thirteen types (lines 427–472). Raised as Q-03.
 - What to do when two classifications tie — the document offers "choose the higher score or show both" and picks neither (lines 1075–1085). Raised as Q-04.
-- Whether 500 is the actual starting cap on history or merely an example number (lines 989–995). Raised as Q-05.
+- Whether 500 is the actual starting cap on history or merely an example number (lines 989–995) — **settled in Phase 5** as a fixed newest-500 cap; configurable retention remains Phase 6.
 - Which ordering governs the PWA work — raised as Q-06 from C-04 above.
 - Custom presets appear once, in the storage list (line 824), and nowhere else; custom templates are promised for version 1.1 (line 1331) and likewise never described. Neither has a home in the plan yet.
 - No drawings of screens beyond rough panel sketches, no dates anywhere, and no names of the people who would build any of it. The plan promises an order, not a calendar.

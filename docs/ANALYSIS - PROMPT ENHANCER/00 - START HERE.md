@@ -65,21 +65,23 @@ Things the material does not settle. Each one is a real gap, not a guess dressed
 
 | # | Question | Why it matters | Who can answer |
 |---|---|---|---|
-| Q-01 | How do the eighteen preset names map onto the thirteen task types? Presets such as API Design, Database, Improve Writing, and UI Design name no task type of their own | Presets pre-fill the task type and sections; without the mapping they cannot be built as described | The document's author |
+| Q-01 | How do the seventeen named preset labels map onto the thirteen task types? Presets such as API Design, Database, Improve Writing, and UI Design name no task type of their own | Presets pre-fill the task type and sections; without the mapping they cannot be built as described | Settled in Phase 4 implementation |
 | Q-04 | When two classifications tie, does the app pick the higher score or show both? The document offers both and chooses neither | Decides what the person actually sees on ambiguous input | The document's author |
-| Q-05 | Is 500 the starting maximum for history, or just an example number? | Sets a default in the settings' data tab | The document's author |
+| Q-05 | Is 500 the starting maximum for history, or just an example number? | Sets a default in the settings' data tab | Settled in Phase 5 implementation |
 | Q-06 | Which ordering governs the offline work — build-order step 20 or release version 1.3? The two disagree | Decides whether offline support lands before or well after the first stable release — see C-04 in [[02 - DOCUMENT FINDINGS#Where the documents disagree\|Where the documents disagree]] | The document's author |
 | Q-07 | The folder of working files these notes sit in holds a working dashboard-style application, while this document plans the prompt enhancer. Should a later pass read that code and compare the two? | Decides whether this becomes a combined analysis with a code half — and whether anything in the plan is already built | The vault's owner |
 
 ## Questions since answered
 
-Phase 2–3 settled Q-02 and Q-03 while preserving their original wording here for traceability. Q-02 uses the approved margin × evidence-floor formula: `confidence = round(min(margin, evidence))`, with `EVIDENCE_SATURATION = 7` and bands of ≥80 High, 60–79 Medium, and <60 Low. C-02 is a printed-weight arithmetic erratum; the implementation does not retune the weights to reach 11. Q-03 is settled by nine authored recipes for the previously unlisted task types. The engine tie rule is recorded with R-07; full conflict display remains Phase 6 work.
+Phase 2–3 settled Q-02 and Q-03 while preserving their original wording here for traceability. The Phase 4–5 implementation settled Q-01 by treating the 17 enumerated names as authoritative and mapping unmatched labels to the closest existing recipe without expanding the 13-type taxonomy. It settled Q-05 as a fixed newest-500 history limit and pulled Clear History/export forward for the normal release. Browser acceptance remains before these roadmap items can be marked finished. Q-02 uses the approved margin × evidence-floor formula: `confidence = round(min(margin, evidence))`, with `EVIDENCE_SATURATION = 7` and bands of ≥80 High, 60–79 Medium, and <60 Low. C-02 is a printed-weight arithmetic erratum; the implementation does not retune the weights to reach 11. Q-03 is settled by nine authored recipes for the previously unlisted task types. The engine tie rule is recorded with R-07; full conflict display remains Phase 6 work.
 
 | # | Question | Resolution |
 |---|---|---|
 | Q-02 | How do raw scores become the percentage confidence bands? The worked example totals 11, but the printed weights give at most 7 for that sentence | **Settled:** margin × evidence floor, with `EVIDENCE_SATURATION = 7`; C-02 is a printed-weight arithmetic erratum, not a reason to retune the score to 11. |
 | Q-03 | Which heading layouts apply to the nine task types whose sections are never listed? | **Settled:** nine recipes were authored, provenance-marked, and registered for the missing task types. |
+| Q-01 | How do the preset labels map onto task types? | **Settled:** the 17 named presets are authoritative; API Design and Database map to Feature, Improve Writing to Rewrite, Analyze Information to Research, and UI Design/UX Review to UI Review. |
+| Q-05 | Is 500 the starting maximum for history? | **Settled:** Phase 5 uses a fixed newest-500 cap; configurable retention remains Phase 6. |
 
 ## What changed
 
-Revised twice. On 21 August 2026 work began on the build itself: Phase 1 was implemented, both trackers were brought level with the code, and one piece of this vault's own arithmetic was corrected along the way. On 22 August 2026 the Phase 2–3 engine pipeline was completed and Q-02/Q-03 were settled without changing the material or later-phase scope. The record lives in [[13 - REVISION LOG]].
+Revised three times. On 21 August 2026 work began on the build itself: Phase 1 was implemented, both trackers were brought level with the code, and one piece of this vault's own arithmetic was corrected along the way. On 22 August 2026 the Phase 2–3 engine pipeline was completed and Q-02/Q-03 were settled without changing the material or later-phase scope. The Phase 4–5 implementation is now present and its automated/static gates pass; browser acceptance is still pending. The record lives in [[13 - REVISION LOG]].

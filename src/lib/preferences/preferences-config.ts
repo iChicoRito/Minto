@@ -12,6 +12,7 @@
  */
 
 import type { FontKey } from "@/lib/fonts/registry";
+import type { EnhancementLevel } from "@/prompt-engine/types";
 
 import type { ContentLayout, NavbarStyle, SidebarCollapsible, SidebarVariant } from "./layout";
 import type { ThemeMode, ThemePreset } from "./theme";
@@ -29,6 +30,9 @@ export type PreferenceValueMap = {
   navbar_style: NavbarStyle;
   sidebar_variant: SidebarVariant;
   sidebar_collapsible: SidebarCollapsible;
+  default_enhancement_level: EnhancementLevel;
+  default_prompt_sections: string;
+  history_enabled: "true" | "false";
 };
 
 export type PreferenceKey = keyof PreferenceValueMap;
@@ -73,6 +77,9 @@ export const PREFERENCE_DEFAULTS: PreferenceValueMap = {
   navbar_style: "sticky",
   sidebar_variant: "inset",
   sidebar_collapsible: "icon",
+  default_enhancement_level: "standard",
+  default_prompt_sections: "objective,requirements,constraints,verification",
+  history_enabled: "true",
 };
 
 /**
@@ -87,4 +94,7 @@ export const PREFERENCE_PERSISTENCE: PreferencePersistenceConfig = {
   navbar_style: "client-cookie",
   sidebar_variant: "client-cookie", // layout-critical → cannot be "localStorage"
   sidebar_collapsible: "client-cookie", // layout-critical → cannot be "localStorage"
+  default_enhancement_level: "localStorage",
+  default_prompt_sections: "localStorage",
+  history_enabled: "localStorage",
 };

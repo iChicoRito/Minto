@@ -371,10 +371,12 @@ function verifyGeneratorCase(testCase: GeneratorCase, failures: Failure[]): void
 function verifyPipelineCase(testCase: PipelineCase, failures: Failure[]): void {
   let firstRun: ReturnType<typeof enhancePrompt>;
   let secondRun: ReturnType<typeof enhancePrompt>;
+  const sectionsBefore = testCase.options?.sections === undefined ? undefined : [...testCase.options.sections];
 
   try {
-    firstRun = enhancePrompt(testCase.input, testCase.level === undefined ? undefined : { level: testCase.level });
-    secondRun = enhancePrompt(testCase.input, testCase.level === undefined ? undefined : { level: testCase.level });
+    const options = testCase.options ?? (testCase.level === undefined ? undefined : { level: testCase.level });
+    firstRun = enhancePrompt(testCase.input, options);
+    secondRun = enhancePrompt(testCase.input, options);
   } catch (error) {
     recordFailure(failures, "pipeline", testCase.name, [error instanceof Error ? error.message : String(error)]);
     return;
@@ -389,7 +391,13 @@ function verifyPipelineCase(testCase: PipelineCase, failures: Failure[]): void {
   }
 
   try {
+    if (sectionsBefore !== undefined) {
+      assert.deepStrictEqual(testCase.options?.sections, sectionsBefore, "caller sections must not be mutated");
+    }
     assert.deepStrictEqual(firstRun.analysis, testCase.expectedAnalysis);
+    if (testCase.expectedResolved !== undefined) {
+      assert.deepStrictEqual(firstRun.resolved, testCase.expectedResolved);
+    }
     if (testCase.expectedMarkdown !== undefined) {
       assert.strictEqual(firstRun.markdown, testCase.expectedMarkdown);
     }

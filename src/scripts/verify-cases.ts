@@ -463,7 +463,18 @@ export type PipelineCase = {
   name: string;
   input: string;
   level?: EnhancementLevel;
+  options?: {
+    level?: EnhancementLevel;
+    taskType?: PromptTaskType;
+    sections?: readonly SectionId[];
+  };
   expectedAnalysis: PromptAnalysis;
+  expectedResolved?: {
+    taskType: PromptTaskType;
+    category: PromptCategory;
+    level: EnhancementLevel;
+    sections: readonly SectionId[];
+  };
   expectedMarkdown?: string;
   expectedHeadings?: string[];
 };
@@ -608,5 +619,68 @@ export const PIPELINE_CASES: ReadonlyArray<PipelineCase> = [
     },
     expectedMarkdown: "",
     expectedHeadings: [],
+  },
+  {
+    name: "manual task type override resolves a development recipe",
+    input: "fix login problem",
+    options: { taskType: "bug-fix", level: "standard" },
+    expectedAnalysis: {
+      original: "fix login problem",
+      category: "general",
+      taskType: "general",
+      confidence: 43,
+      action: "fix",
+      subject: "login problem",
+      domain: "authentication",
+      technologies: [],
+      constraints: [],
+      requirements: ["Fix login problem"],
+      enhancementLevel: "standard",
+    },
+    expectedResolved: {
+      taskType: "bug-fix",
+      category: "development",
+      level: "standard",
+      sections: ["objective", "requirements", "verification"],
+    },
+    expectedHeadings: ["# Objective", "## Requirements", "## Verification"],
+  },
+  {
+    name: "explicit section selection controls output order",
+    input: "fix login problem",
+    options: {
+      taskType: "bug-fix",
+      level: "detailed",
+      sections: ["objective", "verification", "objective"],
+    },
+    expectedAnalysis: {
+      original: "fix login problem",
+      category: "general",
+      taskType: "general",
+      confidence: 43,
+      action: "fix",
+      subject: "login problem",
+      domain: "authentication",
+      technologies: [],
+      constraints: [],
+      requirements: ["Fix login problem"],
+      enhancementLevel: "detailed",
+    },
+    expectedResolved: {
+      taskType: "bug-fix",
+      category: "development",
+      level: "detailed",
+      sections: ["objective", "verification"],
+    },
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "Resolve the login problem.",
+      "",
+      "## Verification",
+      "",
+      "Confirm that the login problem is resolved.",
+    ].join("\n"),
+    expectedHeadings: ["# Objective", "## Verification"],
   },
 ];

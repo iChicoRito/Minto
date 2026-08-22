@@ -110,15 +110,17 @@ The picture of this order lives in [[06 - DIAGRAMS#5. The order of the phases|Di
 |---|---|---|---|
 | R-12 | Build the Enhance page input panel: the text box, the type picker set to auto-detect, the strength picker, the section tick-list, and the Enhance button | The front door of the product | `prompt-enhancer-detailed-context.md`, lines 646–667 |
 | R-13 | Build the result side: Result and Preview tabs with Copy, Edit, Save, and Export | Turns the pipeline's output into something usable | Same file, lines 669–686 |
-| R-14 | Enter the eighteen starter presets in four groups, each pre-filling category, type, strength, and sections, then jumping to Enhance | Presets bypass or assist classification — a promised feature | Same file, lines 706–756 |
+| R-14 | Enter the seventeen named starter presets in four groups, each pre-filling category, type, strength, and sections, then jumping to Enhance | Presets bypass or assist classification — a promised feature | Same file, lines 706–756 |
 | R-15 | Build the markdown editor: toolbar helpers, fullscreen, undo and reset, word and character counts, live preview beside the text | After enhancement the person may polish by hand | Same file, lines 760–787 |
 
 **How you know the phase is finished:**
 
-- A prompt goes in, a formatted result comes out, and all four actions on the result work.
+- A prompt goes in, a formatted result comes out, and all four actions on the result work. Phase 4 and Phase 5 are
+  released together so Save never reports ephemeral success.
 - Clicking the Bug Fix preset lands on Enhance with everything already configured, as the document's walkthrough describes (lines 747–756).
 
-**What could hold it up:** The preset list and the task-type list do not fully line up — several presets name no matching task type. See Q-01 in [[00 - START HERE#Open questions|Open questions]]; it should be answered before R-14 is finished, though the work can start.
+**What could hold it up:** The 17 named presets include labels without exact taxonomy entries. The implementation maps
+those labels to the closest existing recipe without expanding the 13-type engine taxonomy.
 
 ---
 
@@ -141,8 +143,12 @@ The picture of this order lives in [[06 - DIAGRAMS#5. The order of the phases|Di
 
 - An enhancement appears in history by itself, under today's heading, without anyone pressing save.
 - A prompt saved to the library can be found by search, renamed, duplicated, starred, filed into a folder, and tagged.
+- Normal release also includes a fixed newest-500 history cap, Clear History, local collection JSON export, truthful
+  storage-failure states, and a local-only/non-encrypted disclosure; import and configurable data settings remain Phase 6.
 
-**What could hold it up:** Nothing the material names.
+**What could hold it up:** Browser-local data is best-effort and origin-bound. Phase 5 therefore ships its minimum
+retention, erasure, export, and failure safeguards together with the first Dexie schema; polished import/settings
+controls remain Phase 6.
 
 ---
 

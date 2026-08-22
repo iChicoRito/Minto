@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
+import { MemoryProvider } from "./_components/memory-provider";
 import { AppSidebar } from "./_components/sidebar/app-sidebar";
 
 export const metadata: Metadata = {
@@ -24,7 +25,9 @@ export default function Layout({ children }: Readonly<{ children: ReactNode }>) 
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
         </header>
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main className="flex-1 p-4 md:p-6">
+          <MemoryProvider>{children}</MemoryProvider>
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );

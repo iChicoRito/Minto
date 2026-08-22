@@ -15,9 +15,28 @@ import { polishLight } from "./rules/light-polish";
 import { selectSections } from "./rules/select-sections";
 import { resolveTemplate } from "./templates/resolve-template";
 import type { SectionId } from "./templates/template-types";
-import type { EnhancementLevel, PromptAnalysis } from "./types";
+import type { EnhancementLevel, PromptAnalysis, PromptCategory, PromptTaskType } from "./types";
 
 type SectionContent = string | string[];
+
+export type EnhancePromptOptions = {
+  level?: EnhancementLevel;
+  taskType?: PromptTaskType;
+  sections?: readonly SectionId[];
+};
+
+export type ResolvedEnhancement = {
+  taskType: PromptTaskType;
+  category: PromptCategory;
+  level: EnhancementLevel;
+  sections: readonly SectionId[];
+};
+
+export type EnhancePromptResult = {
+  analysis: PromptAnalysis;
+  resolved: ResolvedEnhancement;
+  markdown: string;
+};
 
 /**
  * Authored pipeline copy: standard/detailed objectives use the material's
@@ -117,13 +136,14 @@ function buildContent(
  * Enhances a raw prompt synchronously through parsing, classification,
  * template selection, section rules, and Markdown generation.
  */
-export function enhancePrompt(
-  raw: string,
-  options?: { level?: EnhancementLevel },
-): { analysis: PromptAnalysis; markdown: string } {
+export function enhancePrompt(raw: string, options?: EnhancePromptOptions): EnhancePromptResult {
   const level = options?.level ?? "standard";
   const parsed = parsePrompt(raw);
   const classification = classifyPrompt(parsed, raw);
+  const taskType = options?.taskType ?? classification.taskType;
+  const template = resolveTemplate(taskType);
+  const sections =
+    options?.sections === undefined ? selectSections(template, level, parsed) : [...new Set(options.sections)];
   const analysis: PromptAnalysis = {
     original: raw,
     category: classification.category,
@@ -137,20 +157,24 @@ export function enhancePrompt(
     requirements: parsed.requirements.slice(),
     enhancementLevel: level,
   };
+  const resolved: ResolvedEnhancement = {
+    taskType,
+    category: template.category,
+    level,
+    sections,
+  };
 
   if (raw.trim().length === 0) {
-    return { analysis, markdown: "" };
+    return { analysis, resolved, markdown: "" };
   }
 
-  const template = resolveTemplate(classification.taskType);
   if (level === "light") {
     const objective = polishLight(parsed, raw);
-    return { analysis, markdown: generateMarkdown({ objective }, { level }) };
+    return { analysis, resolved, markdown: generateMarkdown({ objective }, { level }) };
   }
 
-  const sections = selectSections(template, level, parsed);
   const content = buildContent(sections, parsed, raw);
-  return { analysis, markdown: generateMarkdown(content, { level }) };
+  return { analysis, resolved, markdown: generateMarkdown(content, { level }) };
 }
 
 export type { ClassificationResult } from "./classifier/classify-prompt";
