@@ -214,9 +214,10 @@ validation, classifier trust messaging, privacy surfaces, and mobile editor tabs
 evidence pass reports `166/166` checks, including `120/120` authored dataset cases; the warmed performance harness stays
 well below the `<100 ms` p95 target. The enhancer-only `build:static` path succeeds at both root and
 `/prompt-enhancer` base paths, emits `404.html`, the manifest, the revisioned service worker, and `.nojekyll`, and
-excludes the frozen template. The Pages workflow includes type, purity, engine, product, performance, and artifact
-gates. The user confirmed the current application works in a browser; a full cross-browser/offline device matrix is not
-recorded in this repository.
+excludes the frozen template. The Pages workflow includes type, purity, engine, product, performance, and artifact gates.
+Workflow run #1 passed all of those gates, then stopped at `Configure Pages` because the repository Pages API is not
+configured. The user confirmed the current application works in a browser; a full cross-browser/offline device matrix
+and live Pages run are not recorded in this repository.
 
 ---
 

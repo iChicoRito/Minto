@@ -88,6 +88,7 @@ injects a native revisioned service worker, and supports the `/prompt-enhancer` 
 | Static HTTP smoke | Exported routes, manifest, and worker returned HTTP 200 |
 | User verification | User confirmed the current application works in a browser |
 
-The Pages workflow is committed and ready to run on `main`. A complete cross-browser/offline device matrix and a recorded
-live Pages run are not included in this repository; those remain release-environment evidence rather than product-code
-gaps.
+The Pages workflow is committed on `main`. Workflow run #1 passed engine, product, performance, type, purity, static
+build, and artifact checks, then stopped at `Configure Pages` because the repository Pages API is not configured. A
+complete cross-browser/offline device matrix and a successful live Pages run are not included in this repository; the
+remaining R-28 action is owner-side Pages activation rather than a product-code gap.

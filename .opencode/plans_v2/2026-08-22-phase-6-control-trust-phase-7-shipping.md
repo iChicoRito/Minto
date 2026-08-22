@@ -2,7 +2,7 @@
 title: Phase 6 Control and Trust and Phase 7 Validation and Shipping
 status: blocked
 created_at: 2026-08-22T10:54:28+08:00
-updated_at: 2026-08-22T12:25:43+08:00
+updated_at: 2026-08-22T12:36:01+08:00
 ---
 
 # Phase 6 Control and Trust and Phase 7 Validation and Shipping Implementation Plan
@@ -384,6 +384,8 @@ builds but is absent from the shipping artifact.
   `.nojekyll`, and icon with no `out/template` directory. Root and Pages-base static builds and an HTTP smoke of all
   exported routes passed.
 - The Pages workflow now runs the engine purity gate and checks `404.html` and the icon in addition to the core artifact.
+- Pushed commit `fe0a95c` triggered workflow run #1. Engine, product, performance, type, purity, static-build, and
+  artifact gates passed; `Configure Pages` failed because the repository Pages API returned 404. No deploy job ran.
 - The native generated service worker and SVG icon entries are intentional: they provide the required fixed-asset
   precache/offline behavior without adding a build-time dependency or a second worker abstraction.
 - Browser responsive/accessibility/offline checks, roadmap analysis-doc updates, and the live Pages workflow have not run.
@@ -391,5 +393,5 @@ builds but is absent from the shipping artifact.
 ## Current status
 
 Blocked only at release acceptance: repository-owner GitHub Pages activation/approval and the browser/live matrix are
-required before Phase 7 can be marked complete. The implementation choice above is settled; final implementation checks
-are green.
+required before Phase 7 can be marked complete. The implementation choice above is settled and final implementation
+checks are green; only owner-side Pages activation and the live acceptance run remain.

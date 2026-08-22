@@ -8,10 +8,10 @@
 
 | Status | How many |
 |---|---|
-| ✅ Finished | 27 |
+| ✅ Finished | 26 |
 | 🟨 Being worked on | 0 |
 | ⭕ Not started | 0 |
-| ❌ Blocked | 0 |
+| ❌ Blocked | 1 |
 | 🔵 Already there | 1 |
 | ⬜ Dropped | 0 |
 | ❓ Unclear | 0 |
@@ -80,13 +80,14 @@ Work began on 21 August 2026 — see [[13 - REVISION LOG]]. One item was found a
 | R-25 | Engine test suite and the 100–200 example dataset | ✅ Finished | `verify-engine` passes `166/166`, including `120/120` dataset cases; product verification passes `9/9`. |
 | R-26 | The speed target: under a tenth of a second, on-demand recalculation | ✅ Finished | Three benchmark passes reported p95 values under 4 ms; the latest measured p95 was `4.79 ms`. |
 | R-27 | Offline support and installability | ✅ Finished | Static manifest, native service worker, revisioned precache, local-only runtime behavior, and `.nojekyll` are shipped. |
-| R-28 | Putting the finished app on a static host | ✅ Finished | Root and `/prompt-enhancer` static artifacts pass route/asset/template checks; the Pages workflow is ready for deployment. |
+| R-28 | Putting the finished app on a static host | ❌ Blocked | The implementation and artifact checks pass, but Pages workflow run #1 stopped at `Configure Pages`; the repository Pages API is not configured yet. |
 
 ## What is blocked
 
-No product implementation is blocked. R-01 through R-28 are implemented, targeted checks pass, and the user confirmed the
-current application works in a browser. A complete four-browser/offline device matrix and a recorded live Pages run are
-not included in this repository.
+R-01 through R-27 are implemented, targeted checks pass, and the user confirmed the current application works in a
+browser. R-28 is blocked only by GitHub Pages activation: workflow run #1 passed every product/static gate before
+`Configure Pages` failed. A complete four-browser/offline device matrix and a successful live Pages run are not yet
+recorded in this repository.
 
 ## Status legend
 
