@@ -8,6 +8,8 @@
  * Purity: relative engine imports only; no framework, storage, browser, time,
  * randomness, or locale-dependent APIs.
  */
+
+import type { ClassificationResult } from "./classifier/classify-prompt";
 import { classifyPrompt } from "./classifier/classify-prompt";
 import { generateMarkdown } from "./generator/generate-markdown";
 import { type ParsedPrompt, parsePrompt } from "./parser/parse-prompt";
@@ -34,6 +36,7 @@ export type ResolvedEnhancement = {
 
 export type EnhancePromptResult = {
   analysis: PromptAnalysis;
+  classification: ClassificationResult;
   resolved: ResolvedEnhancement;
   markdown: string;
 };
@@ -43,8 +46,10 @@ export type EnhancePromptResult = {
  * concise fix wording; other objectives reuse the existing light polisher.
  */
 function buildObjective(parsed: ParsedPrompt, raw: string): string {
-  if (parsed.action === "fix" && parsed.subject !== undefined) {
-    return `Resolve the ${parsed.subject}.`;
+  const subject =
+    parsed.subject && !["it", "this", "that"].includes(parsed.subject.toLowerCase()) ? parsed.subject : undefined;
+  if (parsed.action === "fix") {
+    return subject === undefined ? "Resolve the described issue." : `Resolve the ${subject}.`;
   }
   return polishLight(parsed, raw);
 }
@@ -54,7 +59,8 @@ function buildObjective(parsed: ParsedPrompt, raw: string): string {
  * from the parsed subject until section-specific rule content exists.
  */
 function narrativeContent(section: SectionId, parsed: ParsedPrompt): string {
-  const subject = parsed.subject ?? "request";
+  const subject =
+    parsed.subject && !["it", "this", "that"].includes(parsed.subject.toLowerCase()) ? parsed.subject : "request";
 
   switch (section) {
     case "problem":
@@ -62,8 +68,10 @@ function narrativeContent(section: SectionId, parsed: ParsedPrompt): string {
     case "scope":
       return `Limit the work to the ${subject}.`;
     case "verification":
-      if (parsed.subject === undefined) {
-        return "Confirm that the requested outcome is complete.";
+      if (parsed.subject === undefined || ["it", "this", "that"].includes(parsed.subject.toLowerCase())) {
+        return parsed.action === "fix"
+          ? "Confirm that the issue is resolved."
+          : "Confirm that the requested outcome is complete.";
       }
       return `Confirm that the ${subject} is resolved.`;
     case "context":
@@ -165,16 +173,16 @@ export function enhancePrompt(raw: string, options?: EnhancePromptOptions): Enha
   };
 
   if (raw.trim().length === 0) {
-    return { analysis, resolved, markdown: "" };
+    return { analysis, classification, resolved, markdown: "" };
   }
 
   if (level === "light") {
     const objective = polishLight(parsed, raw);
-    return { analysis, resolved, markdown: generateMarkdown({ objective }, { level }) };
+    return { analysis, classification, resolved, markdown: generateMarkdown({ objective }, { level }) };
   }
 
   const content = buildContent(sections, parsed, raw);
-  return { analysis, resolved, markdown: generateMarkdown(content, { level }) };
+  return { analysis, classification, resolved, markdown: generateMarkdown(content, { level }) };
 }
 
 export type { ClassificationResult } from "./classifier/classify-prompt";
@@ -182,4 +190,5 @@ export type { ConfidenceBand } from "./classifier/to-confidence";
 export type { ParsedPrompt } from "./parser/parse-prompt";
 export type { PromptTemplate, SectionId } from "./templates/template-types";
 export type { EnhancementLevel, PromptAnalysis, PromptCategory, PromptTaskType } from "./types";
+export { MAX_PROMPT_CHARACTERS, validatePrompt } from "./validate-prompt";
 export { classifyPrompt, generateMarkdown, parsePrompt, polishLight, resolveTemplate, selectSections };

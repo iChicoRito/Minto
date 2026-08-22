@@ -68,3 +68,26 @@ The broader four-browser matrix is not recorded. Nothing was pushed or deployed.
 The user confirmed that the combined Phase 4–5 flow works in their browser. The roadmap and task trackers therefore
 promote R-12 through R-19 and T-24 through T-39 from 🟨 to ✅. This is user-reported browser smoke verification; a
 complete Chrome/Edge/Firefox/Safari matrix remains unrecorded.
+
+### 22 August 2026 — Phases 6 and 7 implementation and shipping pass
+
+The control/trust and validation/shipping plan is implemented in local `main`. Settings now own prompt defaults,
+sections, appearance, history limits, backup/restore, and destructive data controls. The app validates hard inputs,
+reports classifier ambiguity without inventing certainty, exposes the local-only privacy promise, and switches the
+Markdown editor to Edit/Preview tabs on phones. The release path stages only enhancer-owned source, exports fixed files,
+injects a native revisioned service worker, and supports the `/prompt-enhancer` Pages base path.
+
+| Check | Result |
+|---|---|
+| `npm run verify:engine` | 166/166 passed, including 120/120 authored dataset cases |
+| `npm run verify:product` | 9/9 passed |
+| `npm run verify:performance` | p95 remained below 5 ms in recorded runs; target is <100 ms |
+| TypeScript and scoped Biome | Passed |
+| `npm run build` | Passed with the frozen template routes present |
+| `npm run build:static` | Root and `/prompt-enhancer` artifacts passed route, asset, worker, and no-template checks |
+| Static HTTP smoke | Exported routes, manifest, and worker returned HTTP 200 |
+| User verification | User confirmed the current application works in a browser |
+
+The Pages workflow is committed and ready to run on `main`. A complete cross-browser/offline device matrix and a recorded
+live Pages run are not included in this repository; those remain release-environment evidence rather than product-code
+gaps.

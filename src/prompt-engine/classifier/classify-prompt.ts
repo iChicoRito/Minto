@@ -40,6 +40,8 @@ export type ClassificationResult = {
   scores: Record<PromptTaskType, number>;
   /** True when the Low-band fallback reported "general" instead of the winner. */
   fallbackToGeneral: boolean;
+  /** Positive task types sharing the highest score, in stable task-type order. */
+  topMatches: readonly PromptTaskType[];
 };
 
 /**
@@ -225,6 +227,8 @@ export function classifyPrompt(_parsed: ParsedPrompt, raw: string): Classificati
   const confidence = toConfidence(scores);
   const band = bandOf(confidence);
   const fallbackToGeneral = band === "low";
+  const highestScore = Math.max(...Object.values(scores));
+  const topMatches = TASK_TYPE_ORDER.filter((taskType) => scores[taskType] > 0 && scores[taskType] === highestScore);
 
   const reportedType: PromptTaskType = fallbackToGeneral || winner === undefined ? "general" : winner;
   const reportedCategory: PromptCategory = fallbackToGeneral ? "general" : TYPE_CATEGORY[reportedType];
@@ -236,5 +240,6 @@ export function classifyPrompt(_parsed: ParsedPrompt, raw: string): Classificati
     band,
     scores,
     fallbackToGeneral,
+    topMatches,
   };
 }

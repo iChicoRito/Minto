@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import type { Metadata } from "next";
 
+import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { APP_CONFIG } from "@/config/app-config";
@@ -29,7 +30,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     font,
     default_enhancement_level,
     default_prompt_sections,
+    default_prompt_type,
     history_enabled,
+    history_max_entries,
   } = PREFERENCE_DEFAULTS;
   return (
     <html
@@ -43,7 +46,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       data-font={font}
       data-default-enhancement-level={default_enhancement_level}
       data-default-prompt-sections={default_prompt_sections}
+      data-default-prompt-type={default_prompt_type}
       data-history-enabled={history_enabled}
+      data-history-max-entries={history_max_entries}
       suppressHydrationWarning
     >
       <head>
@@ -60,10 +65,13 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             font={font}
             defaultEnhancementLevel={default_enhancement_level}
             defaultPromptSections={parsePromptSections(default_prompt_sections)}
+            defaultPromptType={default_prompt_type}
             historyEnabled={history_enabled === "true"}
+            historyMaxEntries={Number(history_max_entries) as 100 | 250 | 500 | 1000}
           >
             {children}
             <Toaster />
+            <ServiceWorkerRegister />
           </PreferencesStoreProvider>
         </TooltipProvider>
       </body>

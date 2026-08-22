@@ -1,13 +1,16 @@
 "use client";
 
+import Link from "next/link";
+
 import { useLiveQuery } from "dexie-react-hooks";
 import { Copy, Download, ExternalLink, Save, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { copyText } from "@/lib/browser-actions.client";
-import { exportLocalMemory } from "@/lib/browser-memory/export.client";
+import { exportLocalMemory } from "@/lib/browser-memory/backup.client";
 import type { HistoryRecord } from "@/lib/browser-memory/types";
+import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 import { MemoryErrorBoundary } from "../../_components/memory-error-boundary";
 import { useMemory } from "../../_components/memory-provider";
@@ -24,6 +27,7 @@ function dayLabel(timestamp: number): string {
 
 function HistoryContent() {
   const { status, repository } = useMemory();
+  const historyMaxEntries = usePreferencesStore((state) => state.historyMaxEntries);
   const records = useLiveQuery(
     () => (status === "ready" ? repository.listHistory() : Promise.resolve([])),
     [repository, status],
@@ -54,7 +58,7 @@ function HistoryContent() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3">
         <div>
-          <p className="font-medium text-sm">Newest 500 entries</p>
+          <p className="font-medium text-sm">Newest {historyMaxEntries} entries</p>
           <p className="text-muted-foreground text-xs">
             Automatic history stays in this browser and can be cleared at any time.
           </p>
@@ -100,9 +104,9 @@ function HistoryContent() {
                 </CardHeader>
                 <CardContent className="flex flex-wrap gap-2">
                   <Button asChild type="button" variant="outline" size="sm">
-                    <a href={`/?history=${record.id}`}>
+                    <Link href={`/?history=${record.id}`}>
                       <ExternalLink /> Open
-                    </a>
+                    </Link>
                   </Button>
                   <Button type="button" variant="outline" size="sm" onClick={() => void copy(record)}>
                     <Copy /> Copy

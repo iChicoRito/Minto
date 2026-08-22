@@ -49,6 +49,7 @@ export function PromptInputPanel({
   prompt,
   controls,
   error,
+  promptLength,
   stale,
   disabled,
   dispatch,
@@ -57,6 +58,7 @@ export function PromptInputPanel({
   prompt: string;
   controls: WorkspaceControls;
   error: string | null;
+  promptLength: number;
   stale: boolean;
   disabled: boolean;
   dispatch: Dispatch<WorkspaceAction>;
@@ -84,6 +86,9 @@ export function PromptInputPanel({
           onChange={(event) => dispatch({ type: "prompt-changed", prompt: event.target.value })}
           disabled={disabled}
         />
+        <p className={promptLength > 15_000 ? "text-destructive text-xs" : "text-muted-foreground text-xs"}>
+          {promptLength.toLocaleString()} / 15,000 characters
+        </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">

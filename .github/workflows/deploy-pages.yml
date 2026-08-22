@@ -1,0 +1,69 @@
+name: Deploy Prompt Enhancer
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify engine
+        run: npm run verify:engine
+      - name: Verify product
+        run: npm run verify:product
+      - name: Verify performance
+        run: npm run verify:performance
+      - name: Type check
+        run: npx tsc -p tsconfig.engine.json --noEmit && npx tsc --noEmit
+      - name: Verify engine purity
+        run: |
+          if git grep -nE "from [\"'](react|next|@/)" -- src/prompt-engine; then exit 1; fi
+          if git grep -nE '\b(window|document\.|localStorage|sessionStorage|navigator|indexedDB|Math\.random|Date\.now|toLocaleLowerCase|toLocaleUpperCase)\b' -- src/prompt-engine; then exit 1; fi
+      - name: Build static artifact
+        run: NEXT_PUBLIC_BASE_PATH=/prompt-enhancer npm run build:static
+      - name: Check artifact
+        run: |
+          test -f out/index.html
+          test -f out/404.html
+          test -f out/manifest.webmanifest
+          test -f out/sw.js
+          test -f out/.nojekyll
+          test -f out/icons/prompt-enhancer.svg
+          test ! -e out/template
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: out
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

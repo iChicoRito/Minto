@@ -19,7 +19,9 @@ export function ThemeBootScript() {
     sidebar_collapsible: PREFERENCE_PERSISTENCE.sidebar_collapsible,
     default_enhancement_level: PREFERENCE_PERSISTENCE.default_enhancement_level,
     default_prompt_sections: PREFERENCE_PERSISTENCE.default_prompt_sections,
+    default_prompt_type: PREFERENCE_PERSISTENCE.default_prompt_type,
     history_enabled: PREFERENCE_PERSISTENCE.history_enabled,
+    history_max_entries: PREFERENCE_PERSISTENCE.history_max_entries,
   });
 
   const defaults = JSON.stringify({
@@ -32,7 +34,9 @@ export function ThemeBootScript() {
     sidebar_collapsible: PREFERENCE_DEFAULTS.sidebar_collapsible,
     default_enhancement_level: PREFERENCE_DEFAULTS.default_enhancement_level,
     default_prompt_sections: PREFERENCE_DEFAULTS.default_prompt_sections,
+    default_prompt_type: PREFERENCE_DEFAULTS.default_prompt_type,
     history_enabled: PREFERENCE_DEFAULTS.history_enabled,
+    history_max_entries: PREFERENCE_DEFAULTS.history_max_entries,
   });
 
   const code = `
@@ -85,7 +89,9 @@ export function ThemeBootScript() {
          var rawSidebarCollapsible = readPreference("sidebar_collapsible", DEFAULTS.sidebar_collapsible);
          var rawDefaultLevel = readPreference("default_enhancement_level", DEFAULTS.default_enhancement_level);
          var rawDefaultSections = readPreference("default_prompt_sections", DEFAULTS.default_prompt_sections);
+         var rawDefaultType = readPreference("default_prompt_type", DEFAULTS.default_prompt_type);
          var rawHistoryEnabled = readPreference("history_enabled", DEFAULTS.history_enabled);
+         var rawHistoryMaxEntries = readPreference("history_max_entries", DEFAULTS.history_max_entries);
 
         var isValidMode = rawMode === "dark" || rawMode === "light" || rawMode === "system";
         var mode = isValidMode ? rawMode : DEFAULTS.theme_mode;
@@ -102,8 +108,12 @@ export function ThemeBootScript() {
          var defaultLevel = rawDefaultLevel === "light" || rawDefaultLevel === "standard" || rawDefaultLevel === "detailed"
            ? rawDefaultLevel
            : DEFAULTS.default_enhancement_level;
-         var defaultSections = rawDefaultSections || DEFAULTS.default_prompt_sections;
-         var historyEnabled = rawHistoryEnabled === "false" ? "false" : "true";
+          var defaultSections = rawDefaultSections || DEFAULTS.default_prompt_sections;
+          var validPromptTypes = ["auto", "general", "bug-fix", "feature", "code-review", "refactor", "testing", "documentation", "rewrite", "summarize", "research", "comparison", "ui-review", "image-prompt"];
+          var defaultType = validPromptTypes.indexOf(rawDefaultType) >= 0 ? rawDefaultType : DEFAULTS.default_prompt_type;
+          var historyEnabled = rawHistoryEnabled === "false" ? "false" : "true";
+          var validHistoryLimits = ["100", "250", "500", "1000"];
+          var historyMaxEntries = validHistoryLimits.indexOf(rawHistoryMaxEntries) >= 0 ? rawHistoryMaxEntries : DEFAULTS.history_max_entries;
 
         root.classList.toggle("dark", resolvedMode === "dark");
         root.setAttribute("data-theme-mode", mode);
@@ -113,9 +123,11 @@ export function ThemeBootScript() {
         root.setAttribute("data-navbar-style", navbarStyle);
          root.setAttribute("data-sidebar-variant", sidebarVariant);
          root.setAttribute("data-sidebar-collapsible", sidebarCollapsible);
-         root.setAttribute("data-default-enhancement-level", defaultLevel);
-         root.setAttribute("data-default-prompt-sections", defaultSections);
-         root.setAttribute("data-history-enabled", historyEnabled);
+          root.setAttribute("data-default-enhancement-level", defaultLevel);
+          root.setAttribute("data-default-prompt-sections", defaultSections);
+          root.setAttribute("data-default-prompt-type", defaultType);
+          root.setAttribute("data-history-enabled", historyEnabled);
+          root.setAttribute("data-history-max-entries", historyMaxEntries);
 
         root.style.colorScheme = resolvedMode === "dark" ? "dark" : "light";
 

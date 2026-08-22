@@ -1,5 +1,5 @@
 import type { PromptPresetId } from "../../../lib/prompt-presets";
-import type { EnhancePromptResult, ResolvedEnhancement } from "../../../prompt-engine";
+import type { ClassificationResult, EnhancePromptResult, ResolvedEnhancement } from "../../../prompt-engine";
 import type { SectionId } from "../../../prompt-engine/templates/template-types";
 import type { EnhancementLevel, PromptAnalysis, PromptTaskType } from "../../../prompt-engine/types";
 
@@ -15,6 +15,7 @@ export type WorkspaceDocument = {
   originalPrompt: string;
   controls: WorkspaceControls;
   analysis: PromptAnalysis;
+  classification: ClassificationResult;
   resolved: ResolvedEnhancement;
   generatedMarkdown: string;
   markdown: string;
@@ -121,6 +122,7 @@ export function documentFromEnhancement(
     originalPrompt,
     controls,
     analysis: result.analysis,
+    classification: result.classification,
     resolved: result.resolved,
     generatedMarkdown: result.markdown,
     markdown: result.markdown,

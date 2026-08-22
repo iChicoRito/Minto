@@ -11,9 +11,8 @@
  * Others are flexible and can use any persistence.
  */
 
-import type { FontKey } from "@/lib/fonts/registry";
-import type { EnhancementLevel } from "@/prompt-engine/types";
-
+import type { EnhancementLevel, PromptTaskType } from "../../prompt-engine/types";
+import type { FontKey } from "../fonts/registry";
 import type { ContentLayout, NavbarStyle, SidebarCollapsible, SidebarVariant } from "./layout";
 import type { ThemeMode, ThemePreset } from "./theme";
 
@@ -32,7 +31,9 @@ export type PreferenceValueMap = {
   sidebar_collapsible: SidebarCollapsible;
   default_enhancement_level: EnhancementLevel;
   default_prompt_sections: string;
+  default_prompt_type: "auto" | PromptTaskType;
   history_enabled: "true" | "false";
+  history_max_entries: "100" | "250" | "500" | "1000";
 };
 
 export type PreferenceKey = keyof PreferenceValueMap;
@@ -79,7 +80,9 @@ export const PREFERENCE_DEFAULTS: PreferenceValueMap = {
   sidebar_collapsible: "icon",
   default_enhancement_level: "standard",
   default_prompt_sections: "objective,requirements,constraints,verification",
+  default_prompt_type: "auto",
   history_enabled: "true",
+  history_max_entries: "500",
 };
 
 /**
@@ -96,5 +99,7 @@ export const PREFERENCE_PERSISTENCE: PreferencePersistenceConfig = {
   sidebar_collapsible: "client-cookie", // layout-critical → cannot be "localStorage"
   default_enhancement_level: "localStorage",
   default_prompt_sections: "localStorage",
+  default_prompt_type: "localStorage",
   history_enabled: "localStorage",
+  history_max_entries: "localStorage",
 };

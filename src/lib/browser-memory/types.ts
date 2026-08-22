@@ -61,6 +61,14 @@ export type PromptEnhancerBackupV1 = {
   data: MemoryExportData;
 };
 
+export type PromptEnhancerBackupV2 = {
+  format: "prompt-enhancer-backup";
+  version: 2;
+  exportedAt: string;
+  settings: import("../preferences/preference-snapshot").PreferenceSnapshot;
+  data: MemoryExportData;
+};
+
 export type MemoryErrorCode = "unavailable" | "blocked" | "quota" | "open" | "write" | "unknown";
 
 export class MemoryRepositoryError extends Error {

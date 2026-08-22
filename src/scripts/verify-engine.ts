@@ -26,6 +26,7 @@ import { selectSections } from "../prompt-engine/rules/select-sections";
 import { TEMPLATE_REGISTRY } from "../prompt-engine/templates/registry";
 import { resolveTemplate } from "../prompt-engine/templates/resolve-template";
 import type { PromptTemplate, SectionId } from "../prompt-engine/templates/template-types";
+import { ENGINE_DATASET } from "./engine-dataset";
 import {
   CLASSIFIER_CASES,
   GENERATOR_CASES,
@@ -419,6 +420,23 @@ function verifyPipelineCase(testCase: PipelineCase, failures: Failure[]): void {
   }
 }
 
+function verifyDatasetCase(testCase: (typeof ENGINE_DATASET)[number], failures: Failure[]): void {
+  let firstRun: ReturnType<typeof enhancePrompt> | undefined;
+  let secondRun: ReturnType<typeof enhancePrompt> | undefined;
+  try {
+    firstRun = enhancePrompt(testCase.input);
+    secondRun = enhancePrompt(testCase.input);
+    assert.equal(firstRun.analysis.taskType, testCase.expectedTaskType);
+    assert.equal(JSON.stringify(firstRun), JSON.stringify(secondRun), "dataset case is not deterministic");
+  } catch (error) {
+    recordFailure(failures, "dataset", testCase.id, [
+      error instanceof Error ? error.message : String(error),
+      `expected task type: ${testCase.expectedTaskType}`,
+      `got: ${JSON.stringify(firstRun ?? null)}`,
+    ]);
+  }
+}
+
 function main(): void {
   const failures: Failure[] = [];
   const sections: SectionResult[] = [
@@ -428,6 +446,7 @@ function main(): void {
     runSection("rules", RULES_CASES, verifyRulesCase, failures),
     runSection("generator", GENERATOR_CASES, verifyGeneratorCase, failures),
     runSection("pipeline", PIPELINE_CASES, verifyPipelineCase, failures),
+    runSection("dataset", ENGINE_DATASET, verifyDatasetCase, failures),
   ];
 
   for (const section of sections) {

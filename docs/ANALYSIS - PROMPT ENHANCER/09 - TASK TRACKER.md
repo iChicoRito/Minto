@@ -62,24 +62,24 @@ Every task here names where it came from. A task with no traceable origin is not
 | T-37 | Add starring to any saved prompt | Lines 888–891, 1298–1300 | The favourite ability; build-order step 15 | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-19]] | ✅ |
 | T-38 | Let prompts be gathered into folders | Lines 815–822, 1298–1300 | The folders table in the store; build-order step 15 | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-19]] | ✅ |
 | T-39 | Let prompts carry free-form tags | Lines 823–824, 897–899 | Tags in the store list and the library's filter ability | [[07 - DEVELOPMENT ROADMAP#Phase 5 — Giving the app a memory\|R-19]] | ✅ |
-| T-40 | Build the first three settings tabs | Lines 952–985 | General, Sections, and Appearance contents | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-20]] | ⭕ |
-| T-41 | Add the data tab: cap, backups, and wipe buttons | Lines 987–1001 | The data-tab sketch with the 500 cap and three clearing controls | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-20]] | ⭕ |
-| T-42 | Write the whole collection out as one backup file | Lines 918–936 | The file `prompt-enhancer-backup.json` and its four parts, version first | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-21]] | ⭕ |
-| T-43 | Check incoming backups before anything changes | Lines 938–947 | The five-step gate and Zod, the checking library named for the job | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-21]] | ⭕ |
-| T-44 | Answer an empty box politely | Lines 1033–1037 | The please-enter-a-prompt message | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-22]] | ⭕ |
-| T-45 | Cope with two-word instructions without inventing | Lines 1039–1045 | The fix-it example and the reasonableness rule | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-22]] | ⭕ |
-| T-46 | Set the size ceiling for version 1 | Lines 1047–1053 | The 10,000–20,000 character range | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-22]] | ⭕ |
-| T-47 | Never fake certainty on odd instructions | Lines 1055–1085 | The General fallback and the conflicting-classification display | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-22]] | ⭕ |
-| T-48 | Print the privacy promise in the sidebar | Lines 1009–1017 | The 100% Local block: no account, no AI, stays in your browser | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-23]] | ⭕ |
-| T-49 | Say it again on the About page | Lines 1019–1027 | The processed-locally wording and the identity remark | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-23]] | ⭕ |
-| T-50 | Fit desktop, tablet, and phone | Lines 1165–1191 | The three layout sketches | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-24]] | ⭕ |
-| T-51 | Swap side-by-side panes for tabs on phones | Lines 1193–1199 | The Edit and Preview note for small screens | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-24]] | ⭕ |
-| T-52 | Cover the six engine areas with checks | Lines 1091–1102 | The test list from classification to markdown generation | [[07 - DEVELOPMENT ROADMAP#Phase 7 — Proving it works and shipping it\|R-25]] | ⭕ |
-| T-53 | Collect 100–200 practice instructions | Lines 1124–1132 | The dataset instruction and why it lets the rules improve systematically | [[07 - DEVELOPMENT ROADMAP#Phase 7 — Proving it works and shipping it\|R-25]] | ⭕ |
-| T-54 | Time the pipeline and keep it under a tenth of a second | Lines 1136–1146 | The target for typical prompts | [[07 - DEVELOPMENT ROADMAP#Phase 7 — Proving it works and shipping it\|R-26]] | ⭕ |
-| T-55 | Recalculate only when inputs actually change | Lines 1148–1161 | The three trigger moments and the three forbidden habits | [[07 - DEVELOPMENT ROADMAP#Phase 7 — Proving it works and shipping it\|R-26]] | ⭕ |
-| T-56 | Let the app install and run with no internet | Lines 1203–1226 | The PWA concept flow: load once, keep a copy on a service worker, work offline | [[07 - DEVELOPMENT ROADMAP#Phase 7 — Proving it works and shipping it\|R-27]] | ⭕ |
-| T-57 | Publish as fixed files on a static host | Lines 1230–1265 | The material's final-phase picture and its list of servers not required | [[07 - DEVELOPMENT ROADMAP#Phase 7 — Proving it works and shipping it\|R-28]] | ⭕ |
+| T-40 | Build the first three settings tabs | Lines 952–985 | General, Sections, and Appearance contents | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-20]] | ✅ |
+| T-41 | Add the data tab: cap, backups, and wipe buttons | Lines 987–1001 | The data-tab sketch with the 500 cap and three clearing controls | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-20]] | ✅ |
+| T-42 | Write the whole collection out as one backup file | Lines 918–936 | The file `prompt-enhancer-backup.json` and its four parts, version first | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-21]] | ✅ |
+| T-43 | Check incoming backups before anything changes | Lines 938–947 | The five-step gate and Zod, the checking library named for the job | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-21]] | ✅ |
+| T-44 | Answer an empty box politely | Lines 1033–1037 | The please-enter-a-prompt message | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-22]] | ✅ |
+| T-45 | Cope with two-word instructions without inventing | Lines 1039–1045 | The fix-it example and the reasonableness rule | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-22]] | ✅ |
+| T-46 | Set the size ceiling for version 1 | Lines 1047–1053 | The 10,000–20,000 character range | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-22]] | ✅ |
+| T-47 | Never fake certainty on odd instructions | Lines 1055–1085 | The General fallback and the conflicting-classification display | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-22]] | ✅ |
+| T-48 | Print the privacy promise in the sidebar | Lines 1009–1017 | The 100% Local block: no account, no AI, stays in your browser | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-23]] | ✅ |
+| T-49 | Say it again on the About page | Lines 1019–1027 | The processed-locally wording and the identity remark | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-23]] | ✅ |
+| T-50 | Fit desktop, tablet, and phone | Lines 1165–1191 | The three layout sketches | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-24]] | ✅ |
+| T-51 | Swap side-by-side panes for tabs on phones | Lines 1193–1199 | The Edit and Preview note for small screens | [[07 - DEVELOPMENT ROADMAP#Phase 6 — Control, trust, and every screen size\|R-24]] | ✅ |
+| T-52 | Cover the six engine areas with checks | Lines 1091–1102 | The test list from classification to markdown generation | [[07 - DEVELOPMENT ROADMAP#Phase 7 — Proving it works and shipping it\|R-25]] | ✅ |
+| T-53 | Collect 100–200 practice instructions | Lines 1124–1132 | The dataset instruction and why it lets the rules improve systematically | [[07 - DEVELOPMENT ROADMAP#Phase 7 — Proving it works and shipping it\|R-25]] | ✅ |
+| T-54 | Time the pipeline and keep it under a tenth of a second | Lines 1136–1146 | The target for typical prompts | [[07 - DEVELOPMENT ROADMAP#Phase 7 — Proving it works and shipping it\|R-26]] | ✅ |
+| T-55 | Recalculate only when inputs actually change | Lines 1148–1161 | The three trigger moments and the three forbidden habits | [[07 - DEVELOPMENT ROADMAP#Phase 7 — Proving it works and shipping it\|R-26]] | ✅ |
+| T-56 | Let the app install and run with no internet | Lines 1203–1226 | The PWA concept flow: load once, keep a copy on a service worker, work offline | [[07 - DEVELOPMENT ROADMAP#Phase 7 — Proving it works and shipping it\|R-27]] | ✅ |
+| T-57 | Publish as fixed files on a static host | Lines 1230–1265 | The material's final-phase picture and its list of servers not required | [[07 - DEVELOPMENT ROADMAP#Phase 7 — Proving it works and shipping it\|R-28]] | ✅ |
 
 ## Tasks that serve no roadmap item
 

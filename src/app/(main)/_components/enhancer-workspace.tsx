@@ -6,13 +6,9 @@ import { copyText, requestTextDownload } from "@/lib/browser-actions.client";
 import { titleFromPrompt } from "@/lib/browser-memory/record-utils";
 import type { HistoryRecord, SavedPrompt } from "@/lib/browser-memory/types";
 import { persistPreference } from "@/lib/preferences/preferences-storage";
-import {
-  DEFAULT_ENHANCEMENT_LEVEL,
-  DEFAULT_PROMPT_SECTIONS,
-  serializePromptSections,
-} from "@/lib/preferences/prompt-preferences";
+import { DEFAULT_ENHANCEMENT_LEVEL, DEFAULT_PROMPT_SECTIONS } from "@/lib/preferences/prompt-preferences";
 import { getPromptPreset } from "@/lib/prompt-presets";
-import { enhancePrompt } from "@/prompt-engine";
+import { enhancePrompt, validatePrompt } from "@/prompt-engine";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 import { useMemory } from "./memory-provider";
@@ -23,6 +19,8 @@ import { createWorkspaceState, documentFromEnhancement, workspaceReducer } from 
 export function EnhancerWorkspace() {
   const defaultLevel = usePreferencesStore((state) => state.defaultEnhancementLevel);
   const defaultSections = usePreferencesStore((state) => state.defaultPromptSections);
+  const defaultPromptType = usePreferencesStore((state) => state.defaultPromptType);
+  const historyMaxEntries = usePreferencesStore((state) => state.historyMaxEntries);
   const preferencesSynced = usePreferencesStore((state) => state.isSynced);
   const historyEnabled = usePreferencesStore((state) => state.historyEnabled);
   const setHistoryEnabled = usePreferencesStore((state) => state.setHistoryEnabled);
@@ -33,7 +31,7 @@ export function EnhancerWorkspace() {
   const [state, dispatch] = useReducer(
     workspaceReducer,
     {
-      taskType: "auto",
+      taskType: defaultPromptType,
       level: defaultLevel ?? DEFAULT_ENHANCEMENT_LEVEL,
       sections: defaultSections.length > 0 ? defaultSections : DEFAULT_PROMPT_SECTIONS,
       presetId: null,
@@ -48,12 +46,13 @@ export function EnhancerWorkspace() {
       type: "controls-changed",
       controls: {
         ...state.controls,
+        taskType: defaultPromptType,
         level: defaultLevel ?? DEFAULT_ENHANCEMENT_LEVEL,
         sections: defaultSections.length > 0 ? defaultSections : DEFAULT_PROMPT_SECTIONS,
         presetId: null,
       },
     });
-  }, [defaultLevel, defaultSections, preferencesSynced, state.controls]);
+  }, [defaultLevel, defaultPromptType, defaultSections, preferencesSynced, state.controls]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -73,7 +72,7 @@ export function EnhancerWorkspace() {
     } else {
       dispatch({ type: "action-message", message: "That preset is not available." });
     }
-    window.history.replaceState(null, "", "/");
+    window.history.replaceState(null, "", window.location.pathname);
   }, []);
 
   useEffect(() => {
@@ -125,7 +124,7 @@ export function EnhancerWorkspace() {
       } catch {
         dispatch({ type: "action-message", message: "That saved prompt could not be opened." });
       } finally {
-        window.history.replaceState(null, "", "/");
+        window.history.replaceState(null, "", window.location.pathname);
       }
     };
     void restore();
@@ -133,15 +132,12 @@ export function EnhancerWorkspace() {
 
   const onControlsChange = (controls: typeof state.controls) => {
     dispatch({ type: "controls-changed", controls });
-    if (controls.presetId === null) {
-      void persistPreference("default_enhancement_level", controls.level);
-      void persistPreference("default_prompt_sections", serializePromptSections(controls.sections));
-    }
   };
 
   const enhance = async () => {
-    if (!state.prompt.trim()) {
-      dispatch({ type: "enhancement-failed", message: "Please enter a prompt." });
+    const validation = validatePrompt(state.prompt);
+    if (!validation.ok) {
+      dispatch({ type: "enhancement-failed", message: validation.message });
       return;
     }
     if (state.document?.dirty && !window.confirm("Replace your unsaved edits with a new enhancement?")) return;
@@ -174,7 +170,7 @@ export function EnhancerWorkspace() {
         };
         setHistoryPending(true);
         try {
-          await repository.addHistoryAndPrune(record, 500);
+          await repository.addHistoryAndPrune(record, historyMaxEntries);
           dispatch({ type: "history-saved", runId: document.runId, historyId });
         } catch {
           dispatch({ type: "action-message", message: "Enhancement complete, but it was not added to local history." });
@@ -275,6 +271,7 @@ export function EnhancerWorkspace() {
           prompt={state.prompt}
           controls={state.controls}
           error={state.error}
+          promptLength={state.prompt.length}
           stale={state.document?.stale ?? false}
           disabled={state.status === "running"}
           dispatch={(action) => {

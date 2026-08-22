@@ -10,6 +10,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import type { WorkspaceState } from "./workspace-state";
 
+const TASK_LABELS: Record<string, string> = {
+  "bug-fix": "Bug Fix",
+  feature: "Build Feature",
+  "code-review": "Code Review",
+  refactor: "Refactor",
+  testing: "Testing",
+  documentation: "Documentation",
+  rewrite: "Rewrite",
+  summarize: "Summarize",
+  research: "Research",
+  comparison: "Compare Options",
+  "ui-review": "UX Review",
+  "image-prompt": "Image Prompt",
+  general: "General",
+};
+
 export function ResultPanel({
   state,
   onViewChange,
@@ -64,6 +80,20 @@ export function ResultPanel({
         {state.actionMessage && (
           <p className="text-muted-foreground text-sm" role="status">
             {state.actionMessage}
+          </p>
+        )}
+        {document.classification.topMatches.length > 1 && (
+          <p className="text-muted-foreground text-sm" role="status">
+            Detected: {TASK_LABELS[document.classification.topMatches[0]]}; Also matches:{" "}
+            {document.classification.topMatches
+              .slice(1)
+              .map((type) => TASK_LABELS[type])
+              .join(", ")}
+          </p>
+        )}
+        {document.classification.topMatches.length === 0 && document.classification.fallbackToGeneral && (
+          <p className="text-muted-foreground text-sm" role="status">
+            Low confidence — using General. You can choose a type manually before enhancing again.
           </p>
         )}
       </CardHeader>

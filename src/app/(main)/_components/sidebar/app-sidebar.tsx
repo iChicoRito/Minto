@@ -8,6 +8,7 @@ import { WandSparkles } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -47,6 +48,16 @@ export function AppSidebar() {
           ))}
         </SidebarMenu>
       </SidebarContent>
+      <SidebarFooter>
+        <div className="rounded-lg border bg-muted/30 p-2 text-muted-foreground text-xs group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:text-center">
+          <span className="font-medium text-foreground group-data-[collapsible=icon]:sr-only">100% Local</span>
+          <span className="block group-data-[collapsible=icon]:sr-only">No account. No AI.</span>
+          <span className="block group-data-[collapsible=icon]:sr-only">Your prompts stay in your browser.</span>
+          <span className="hidden group-data-[collapsible=icon]:inline" title="100% Local">
+            🔒
+          </span>
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 }

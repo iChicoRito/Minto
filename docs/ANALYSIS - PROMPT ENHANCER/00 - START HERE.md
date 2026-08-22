@@ -80,15 +80,15 @@ Things the material does not settle. Each one is a real gap, not a guess dressed
 | Phase 3 — Structure | ✅ Implemented | Rules, templates, strength behavior, Markdown generation, and the public facade exist. |
 | Phase 4 — Workspace | ✅ Implemented | Enhance workspace, 17 presets, result/preview/edit flow, Markdown editor, Copy, and Export are in local `main`; the user verified the flow in a browser. |
 | Phase 5 — Browser memory | ✅ Implemented | Dexie history/library, folders, tags, retention, Clear History, and JSON export are in local `main`; the user verified the flow in a browser. |
-| Phase 6 — Control and trust | ⭕ Not started | Settings/data controls, edge-case handling, privacy surfaces, and full responsive work remain. |
-| Phase 7 — Proving and shipping | ⭕ Not started | Broader test data, performance, offline/installability, and static deployment remain. |
+| Phase 6 — Control and trust | ✅ Implemented | Settings/data controls, edge-case handling, privacy surfaces, and responsive work are implemented and user-verified. |
+| Phase 7 — Proving and shipping | ✅ Implemented | Dataset/performance gates, offline static output, and the GitHub Pages workflow are implemented and checked. |
 
-Phase 4–5 automated and static checks pass, and the user has verified the flow in a browser. A complete four-browser
-matrix for IndexedDB, security, accessibility, and failure behavior is not recorded yet.
+Phase 4–7 automated and static checks pass, and the user has verified the current application in a browser. A complete
+four-browser matrix for IndexedDB, security, accessibility, and failure behavior is not recorded yet.
 
 ## Questions since answered
 
-Phase 2–3 settled Q-02 and Q-03 while preserving their original wording here for traceability. The Phase 4–5 implementation settled Q-01 by treating the 17 enumerated names as authoritative and mapping unmatched labels to the closest existing recipe without expanding the 13-type taxonomy. It settled Q-05 as a fixed newest-500 history limit and pulled Clear History/export forward for the normal release. The user has since verified the Phase 4–5 flow in a browser; a complete four-browser matrix is not recorded. Q-02 uses the approved margin × evidence-floor formula: `confidence = round(min(margin, evidence))`, with `EVIDENCE_SATURATION = 7` and bands of ≥80 High, 60–79 Medium, and <60 Low. C-02 is a printed-weight arithmetic erratum; the implementation does not retune the weights to reach 11. Q-03 is settled by nine authored recipes for the previously unlisted task types. The engine tie rule is recorded with R-07; full conflict display remains Phase 6 work.
+Phase 2–3 settled Q-02 and Q-03 while preserving their original wording here for traceability. The Phase 4–5 implementation settled Q-01 by treating the 17 enumerated names as authoritative and mapping unmatched labels to the closest existing recipe without expanding the 13-type taxonomy. It settled Q-05 as a fixed newest-500 history limit and pulled Clear History/export forward for the normal release. Phase 6 settled Q-04 by showing stable positive top matches while retaining the safe General fallback for ties and unknown input. Phase 7 settled Q-06 by shipping an enhancer-only static artifact with a native service worker and the `/prompt-enhancer` Pages base path. The user has since verified the current application in a browser; a complete four-browser matrix is not recorded. Q-02 uses the approved margin × evidence-floor formula: `confidence = round(min(margin, evidence))`, with `EVIDENCE_SATURATION = 7` and bands of ≥80 High, 60–79 Medium, and <60 Low. C-02 is a printed-weight arithmetic erratum; the implementation does not retune the weights to reach 11. Q-03 is settled by nine authored recipes.
 
 | # | Question | Resolution |
 |---|---|---|
@@ -96,7 +96,9 @@ Phase 2–3 settled Q-02 and Q-03 while preserving their original wording here f
 | Q-03 | Which heading layouts apply to the nine task types whose sections are never listed? | **Settled:** nine recipes were authored, provenance-marked, and registered for the missing task types. |
 | Q-01 | How do the preset labels map onto task types? | **Settled:** the 17 named presets are authoritative; API Design and Database map to Feature, Improve Writing to Rewrite, Analyze Information to Research, and UI Design/UX Review to UI Review. |
 | Q-05 | Is 500 the starting maximum for history? | **Settled:** Phase 5 uses a fixed newest-500 cap; configurable retention remains Phase 6. |
+| Q-04 | How should conflicting classifications be shown? | **Settled:** stable positive top matches are exposed for the UI; exact ties retain the low-confidence General fallback and show the manual type selector. |
+| Q-06 | When should offline support land? | **Settled:** Phase 7 ships the enhancer-only static artifact and native service worker after the Phase 6 controls and trust work. |
 
 ## What changed
 
-Revised five times. On 21 August 2026 work began on the build itself: Phase 1 was implemented, both trackers were brought level with the code, and one piece of this vault's own arithmetic was corrected along the way. On 22 August 2026 the Phase 2–3 engine pipeline was completed and Q-02/Q-03 were settled without changing the material or later-phase scope. The Phase 4–5 implementation is now present in local `main`, its automated/static gates pass, and the user has verified the flow in a browser. The record lives in [[13 - REVISION LOG]].
+Revised six times. On 21 August 2026 work began on the build itself: Phase 1 was implemented, both trackers were brought level with the code, and one piece of this vault's own arithmetic was corrected along the way. On 22 August 2026 the Phase 2–3 engine pipeline was completed, the Phase 4–5 workspace/memory flow was added, and Phases 6–7 were implemented with automated/static evidence and user verification. The record lives in [[13 - REVISION LOG]].

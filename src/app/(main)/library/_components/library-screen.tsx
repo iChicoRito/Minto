@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import Link from "next/link";
+
 import { useLiveQuery } from "dexie-react-hooks";
 import { Copy, Edit3, FolderPlus, Heart, MoreHorizontal, Trash2 } from "lucide-react";
 
@@ -208,9 +210,9 @@ function LibraryContent() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button asChild type="button" variant="outline" size="sm">
-                    <a href={`/?library=${prompt.id}`}>
+                    <Link href={`/?library=${prompt.id}`}>
                       <Edit3 /> Open
-                    </a>
+                    </Link>
                   </Button>
                   <Button
                     type="button"

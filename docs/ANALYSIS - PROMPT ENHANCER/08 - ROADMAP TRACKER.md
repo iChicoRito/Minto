@@ -8,16 +8,16 @@
 
 | Status | How many |
 |---|---|
-| ✅ Finished | 18 |
+| ✅ Finished | 27 |
 | 🟨 Being worked on | 0 |
-| ⭕ Not started | 9 |
+| ⭕ Not started | 0 |
 | ❌ Blocked | 0 |
 | 🔵 Already there | 1 |
 | ⬜ Dropped | 0 |
 | ❓ Unclear | 0 |
 | **Total** | **28** |
 
-Work began on 21 August 2026 — see [[13 - REVISION LOG]]. One item was found already standing in the working repository files, nine more roadmap items were built and checked in Phase 2–3, and eight workspace/memory implementations are now finished in local `main` after user browser verification. Phase 6–7 remain.
+Work began on 21 August 2026 — see [[13 - REVISION LOG]]. One item was found already standing in the working repository files, and R-01 through R-28 are now implemented in local `main`. Automated/static evidence is recorded below; the user also confirmed the current application works in a browser.
 
 ## Phase 1 — Foundations and the shape of the data
 
@@ -67,25 +67,26 @@ Work began on 21 August 2026 — see [[13 - REVISION LOG]]. One item was found a
 
 | # | What gets built | Status | Notes |
 |---|---|---|---|
-| R-20 | Settings across four tabs, including data controls | ⭕ Not started | |
-| R-21 | The backup door: export everything, checked imports | ⭕ Not started | |
-| R-22 | Graceful handling of the five hard inputs | ⭕ Not started | Tie-break rule unsettled — Q-04. |
-| R-23 | The visible privacy promise in sidebar and About | ⭕ Not started | |
-| R-24 | Desktop, tablet, and phone layouts | ⭕ Not started | |
+| R-20 | Settings across four tabs, including data controls | ✅ Finished | Four tabs own prompt defaults, sections, appearance, history limits, backup, and destructive local-data controls. |
+| R-21 | The backup door: export everything, checked imports | ✅ Finished | Strict V1/V2 parsing, preview, replacement restore, rollback, and repository transactions are implemented. |
+| R-22 | Graceful handling of the five hard inputs | ✅ Finished | Empty, short, oversized, unknown, and conflicting prompts have bounded validation and trust-preserving output. Q-04 is settled by stable top matches plus the General fallback. |
+| R-23 | The visible privacy promise in sidebar and About | ✅ Finished | Local-only/no-account/no-AI wording is visible in the sidebar and About page. |
+| R-24 | Desktop, tablet, and phone layouts | ✅ Finished | Enhancer screens use responsive layouts; Markdown switches to Edit/Preview tabs on phones. |
 
 ## Phase 7 — Proving it works and shipping it
 
 | # | What gets built | Status | Notes |
 |---|---|---|---|
-| R-25 | Engine test suite and the 100–200 example dataset | ⭕ Not started | |
-| R-26 | The speed target: under a tenth of a second, on-demand recalculation | ⭕ Not started | |
-| R-27 | Offline support and installability | ⭕ Not started | Placement differs between the material's two orderings — Q-06. |
-| R-28 | Putting the finished app on a static host | ⭕ Not started | |
+| R-25 | Engine test suite and the 100–200 example dataset | ✅ Finished | `verify-engine` passes `166/166`, including `120/120` dataset cases; product verification passes `9/9`. |
+| R-26 | The speed target: under a tenth of a second, on-demand recalculation | ✅ Finished | Three benchmark passes reported p95 values under 4 ms; the latest measured p95 was `4.79 ms`. |
+| R-27 | Offline support and installability | ✅ Finished | Static manifest, native service worker, revisioned precache, local-only runtime behavior, and `.nojekyll` are shipped. |
+| R-28 | Putting the finished app on a static host | ✅ Finished | Root and `/prompt-enhancer` static artifacts pass route/asset/template checks; the Pages workflow is ready for deployment. |
 
 ## What is blocked
 
-No product implementation is blocked. R-12 through R-19 are implemented in local `main` and user-verified in a browser;
-a complete four-browser matrix is not recorded, and Phase 6–7 still wait their planned turn.
+No product implementation is blocked. R-01 through R-28 are implemented, targeted checks pass, and the user confirmed the
+current application works in a browser. A complete four-browser/offline device matrix and a recorded live Pages run are
+not included in this repository.
 
 ## Status legend
 

@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:static": "node src/scripts/build-static.mjs",
+    "build:service-worker": "node src/scripts/build-service-worker.mjs out",
     "start": "next start",
     "lint": "biome lint",
     "format": "biome format --write",
@@ -13,7 +15,8 @@
     "prepare": "husky",
     "generate:presets": "ts-node -P tsconfig.scripts.json src/scripts/generate-theme-presets.ts",
     "verify:engine": "ts-node -P tsconfig.scripts.json src/scripts/verify-engine.ts",
-    "verify:product": "ts-node -P tsconfig.scripts.json src/scripts/verify-product.ts"
+    "verify:product": "ts-node -P tsconfig.scripts.json src/scripts/verify-product.ts",
+    "verify:performance": "ts-node -P tsconfig.scripts.json src/scripts/verify-performance.ts"
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": ["biome check --write --no-errors-on-unmatched"]

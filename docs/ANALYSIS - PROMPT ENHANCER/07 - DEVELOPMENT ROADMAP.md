@@ -207,6 +207,17 @@ controls remain Phase 6.
 
 **What could hold it up:** The material places offline support twice on different timetables — step 20 of the build order but version 1.3 of the release table. See C-04 and Q-06 in [[00 - START HERE#Open questions|Open questions]]; this plan follows the build order, but the choice belongs to the plan's owner.
 
+### Implementation record — 22 August 2026
+
+Phases 6 and 7 are implemented. Settings, versioned local backup/restore, destructive data controls, hard-input
+validation, classifier trust messaging, privacy surfaces, and mobile editor tabs are in the enhancer app. The engine
+evidence pass reports `166/166` checks, including `120/120` authored dataset cases; the warmed performance harness stays
+well below the `<100 ms` p95 target. The enhancer-only `build:static` path succeeds at both root and
+`/prompt-enhancer` base paths, emits `404.html`, the manifest, the revisioned service worker, and `.nojekyll`, and
+excludes the frozen template. The Pages workflow includes type, purity, engine, product, performance, and artifact
+gates. The user confirmed the current application works in a browser; a full cross-browser/offline device matrix is not
+recorded in this repository.
+
 ---
 
 ## Deliberately left out

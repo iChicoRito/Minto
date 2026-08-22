@@ -11,7 +11,7 @@ import {
   SIDEBAR_COLLAPSIBLE_VALUES,
   SIDEBAR_VARIANT_VALUES,
 } from "@/lib/preferences/layout";
-import { parsePromptSections } from "@/lib/preferences/prompt-preferences";
+import { parseHistoryLimit, parsePromptSections, parsePromptType } from "@/lib/preferences/prompt-preferences";
 import { THEME_MODE_VALUES, THEME_PRESET_VALUES } from "@/lib/preferences/theme";
 import { applyThemeMode, subscribeToSystemTheme } from "@/lib/preferences/theme-utils";
 import type { EnhancementLevel } from "@/prompt-engine/types";
@@ -48,7 +48,9 @@ function readDomState(): Partial<PreferencesState> {
       "detailed",
     ] as const),
     defaultPromptSections: parsePromptSections(root.getAttribute("data-default-prompt-sections")),
+    defaultPromptType: parsePromptType(root.getAttribute("data-default-prompt-type")),
     historyEnabled: root.getAttribute("data-history-enabled") !== "false",
+    historyMaxEntries: parseHistoryLimit(root.getAttribute("data-history-max-entries")),
   };
 }
 
@@ -61,7 +63,9 @@ export const PreferencesStoreProvider = ({
   navbarStyle,
   defaultEnhancementLevel,
   defaultPromptSections,
+  defaultPromptType,
   historyEnabled,
+  historyMaxEntries,
 }: {
   children: React.ReactNode;
   themeMode: PreferencesState["themeMode"];
@@ -71,7 +75,9 @@ export const PreferencesStoreProvider = ({
   navbarStyle: PreferencesState["navbarStyle"];
   defaultEnhancementLevel: EnhancementLevel;
   defaultPromptSections: PreferencesState["defaultPromptSections"];
+  defaultPromptType: PreferencesState["defaultPromptType"];
   historyEnabled: boolean;
+  historyMaxEntries: PreferencesState["historyMaxEntries"];
 }) => {
   const [store] = useState<StoreApi<PreferencesState>>(() =>
     createPreferencesStore({
@@ -82,7 +88,9 @@ export const PreferencesStoreProvider = ({
       navbarStyle,
       defaultEnhancementLevel,
       defaultPromptSections,
+      defaultPromptType,
       historyEnabled,
+      historyMaxEntries,
     }),
   );
 

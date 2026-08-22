@@ -73,6 +73,17 @@ export const memoryRepository = {
   listHistory: () => safe(() => getPromptDatabase().history.orderBy("createdAt").reverse().toArray(), "open"),
   deleteHistory: (id: string) => safe(() => getPromptDatabase().history.delete(id), "write"),
   clearHistory: () => safe(() => getPromptDatabase().history.clear(), "write"),
+  pruneHistory: (limit: number) =>
+    safe(async () => {
+      const db = getPromptDatabase();
+      const count = await db.history.count();
+      if (count <= limit) return;
+      const excess = await db.history
+        .orderBy("createdAt")
+        .limit(count - limit)
+        .toArray();
+      await wait(db.history.bulkDelete(excess.map((item) => item.id)));
+    }, "write"),
 
   createPrompt: (record: SavedPrompt) =>
     safe(
@@ -101,6 +112,29 @@ export const memoryRepository = {
   getPrompt: (id: string) => safe(() => promptTable().get(id), "open"),
   listPrompts: () => safe(() => promptTable().orderBy("updatedAt").reverse().toArray(), "open"),
   deletePrompt: (id: string) => safe(() => promptTable().delete(id), "write"),
+
+  clearLibrary: () =>
+    safe(async () => {
+      const db = getPromptDatabase();
+      await wait(
+        db.transaction("rw", db.prompts, db.folders, async () => {
+          await wait(db.prompts.clear());
+          await wait(db.folders.clear());
+        }),
+      );
+    }, "write"),
+
+  clearAll: () =>
+    safe(async () => {
+      const db = getPromptDatabase();
+      await wait(
+        db.transaction("rw", db.history, db.prompts, db.folders, async () => {
+          await wait(db.history.clear());
+          await wait(db.prompts.clear());
+          await wait(db.folders.clear());
+        }),
+      );
+    }, "write"),
 
   duplicatePrompt: (id: string) =>
     safe(async () => {
@@ -170,6 +204,33 @@ export const memoryRepository = {
         folders: await db.folders.toArray(),
       }));
     }, "open"),
+
+  replaceSnapshot: (data: MemoryExportData) =>
+    safe(async () => {
+      const db = getPromptDatabase();
+      await wait(
+        db.transaction("rw", db.history, db.prompts, db.folders, async () => {
+          await wait(db.history.clear());
+          await wait(db.prompts.clear());
+          await wait(db.folders.clear());
+          if (data.history.length > 0)
+            await wait(
+              db.history.bulkAdd(data.history.map((record) => ({ ...record, sectionIds: [...record.sectionIds] }))),
+            );
+          if (data.prompts.length > 0)
+            await wait(
+              db.prompts.bulkAdd(
+                data.prompts.map((record) => ({
+                  ...record,
+                  sectionIds: [...record.sectionIds],
+                  tags: [...record.tags],
+                })),
+              ),
+            );
+          if (data.folders.length > 0) await wait(db.folders.bulkAdd(data.folders.map((record) => ({ ...record }))));
+        }),
+      );
+    }, "write"),
 };
 
 export type MemoryRepository = typeof memoryRepository;
