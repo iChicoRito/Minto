@@ -17,7 +17,7 @@
 | ❓ Unclear | 0 |
 | **Total** | **28** |
 
-Work began on 21 August 2026 — see [[13 - REVISION LOG]]. One item was found already standing in the working repository files, nine more roadmap items were built and checked in Phase 2–3, and eight workspace/memory implementations are now in acceptance. Phase 6–7 remain.
+Work began on 21 August 2026 — see [[13 - REVISION LOG]]. One item was found already standing in the working repository files, nine more roadmap items were built and checked in Phase 2–3, and eight workspace/memory implementations are now in local `main` pending browser acceptance. Phase 6–7 remain.
 
 ## Phase 1 — Foundations and the shape of the data
 
@@ -84,7 +84,8 @@ Work began on 21 August 2026 — see [[13 - REVISION LOG]]. One item was found a
 
 ## What is blocked
 
-Nothing is blocked. Phase 1 and the Phase 2–3 engine pipeline are accounted for; later UI, storage, and product work waits its planned turn.
+No product implementation is blocked. R-12 through R-19 are implemented in local `main` and remain 🟨 only because the
+manual browser acceptance matrix has not run in the current environment; Phase 6–7 still wait their planned turn.
 
 ## Status legend
 

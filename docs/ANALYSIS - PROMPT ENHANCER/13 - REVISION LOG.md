@@ -55,3 +55,10 @@ Fresh automated evidence from the acceptance pass:
 The four-browser IndexedDB/UI acceptance matrix is not claimed complete: this Windows execution environment exposes no
 Chrome, Edge, Firefox, Safari, or browser automation runner. Roadmap items R-12 through R-19 and tasks T-24 through T-39
 remain 🟨 until that manual matrix is run.
+
+### 22 August 2026 — Phases 4 and 5 merged into local main
+
+The implementation commit `1cf1528` (`feat: add workspace and browser memory`) was fast-forwarded into local `main`.
+The merge preserved the pre-existing uncommitted plan and prompt files in the main working tree. Local `main` now
+contains the Phase 1–5 implementation; Phase 4–5 remain 🟨 in the trackers only for the outstanding manual browser
+acceptance matrix. Nothing was pushed or deployed.

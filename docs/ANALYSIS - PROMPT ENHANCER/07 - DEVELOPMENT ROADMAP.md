@@ -100,6 +100,8 @@ The picture of this order lives in [[06 - DIAGRAMS#5. The order of the phases|Di
 
 ## Phase 4 — The workspace people use
 
+**Current state:** Implemented in local `main`; manual browser acceptance remains.
+
 **The goal:** The product becomes visible: a person can type, enhance, preview, edit, and copy, with presets to skip the guesswork.
 
 **Why it comes here:** The workspace has nothing to show until the pipeline exists. This is the first phase a non-technical person would recognise as the app.
@@ -116,7 +118,7 @@ The picture of this order lives in [[06 - DIAGRAMS#5. The order of the phases|Di
 **How you know the phase is finished:**
 
 - A prompt goes in, a formatted result comes out, and all four actions on the result work. Phase 4 and Phase 5 are
-  released together so Save never reports ephemeral success.
+  delivered together so Save never reports ephemeral success.
 - Clicking the Bug Fix preset lands on Enhance with everything already configured, as the document's walkthrough describes (lines 747–756).
 
 **What could hold it up:** The 17 named presets include labels without exact taxonomy entries. The implementation maps
@@ -125,6 +127,8 @@ those labels to the closest existing recipe without expanding the 13-type engine
 ---
 
 ## Phase 5 — Giving the app a memory
+
+**Current state:** Implemented in local `main`; manual browser acceptance remains.
 
 **The goal:** Enhancements stop vanishing: history keeps them automatically, and deliberately saved prompts gather in a library with favourites, folders, and tags.
 
