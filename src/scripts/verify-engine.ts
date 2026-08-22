@@ -117,8 +117,9 @@ function runSection<Case>(
  * Verifies one classifier case. Gate 1 (determinism): the full parse →
  * classify pipeline runs twice and both results must serialize
  * byte-identically. Gate 2 (expectation): deepStrictEqual on the reported
- * taskType + category + band triple, then inclusive range asserts on
- * confidence when the case declares bounds.
+ * taskType + category + band triple, then exact score and fallback asserts
+ * when the case declares them, followed by inclusive confidence range asserts
+ * when bounds are present.
  */
 function verifyClassifierCase(testCase: ClassifierCase, failures: Failure[]): void {
   const firstRun = classifyPrompt(parsePrompt(testCase.input), testCase.input);
@@ -141,6 +142,20 @@ function verifyClassifierCase(testCase: ClassifierCase, failures: Failure[]): vo
         band: testCase.expectedBand,
       },
     );
+    if (testCase.expectedScore !== undefined) {
+      assert.strictEqual(
+        firstRun.scores[testCase.expectedTaskType],
+        testCase.expectedScore,
+        `score for ${testCase.expectedTaskType} does not match`,
+      );
+    }
+    if (testCase.expectedFallbackToGeneral !== undefined) {
+      assert.strictEqual(
+        firstRun.fallbackToGeneral,
+        testCase.expectedFallbackToGeneral,
+        "fallbackToGeneral does not match",
+      );
+    }
     if (testCase.minConfidence !== undefined) {
       assert.ok(
         firstRun.confidence >= testCase.minConfidence,
@@ -156,6 +171,10 @@ function verifyClassifierCase(testCase: ClassifierCase, failures: Failure[]): vo
   } catch {
     recordFailure(failures, "classifier", testCase.name, [
       `expected: taskType=${testCase.expectedTaskType} category=${testCase.expectedCategory} band=${testCase.expectedBand}`,
+      ...(testCase.expectedScore === undefined ? [] : [`expected score=${testCase.expectedScore}`]),
+      ...(testCase.expectedFallbackToGeneral === undefined
+        ? []
+        : [`expected fallbackToGeneral=${testCase.expectedFallbackToGeneral}`]),
       `got:      ${JSON.stringify(firstRun)}`,
     ]);
   }

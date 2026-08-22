@@ -89,7 +89,8 @@ export const PARSER_CASES: ReadonlyArray<ParserCase> = [
 
 /**
  * Classifier cases: raw input → expected task type / category / band, plus
- * optional confidence bounds (asserted as inclusive ranges when present).
+ * optional exact score/fallback assertions and confidence bounds (asserted as
+ * inclusive ranges when present).
  */
 export type ClassifierCase = {
   name: string;
@@ -97,6 +98,10 @@ export type ClassifierCase = {
   expectedTaskType: PromptTaskType;
   expectedCategory: PromptCategory;
   expectedBand: ConfidenceBand;
+  /** Asserts the score for expectedTaskType when set. */
+  expectedScore?: number;
+  /** Asserts the classifier's fallback decision when set. */
+  expectedFallbackToGeneral?: boolean;
   /** Asserts confidence >= min when set. */
   minConfidence?: number;
   /** Asserts confidence <= max when set. */
@@ -112,6 +117,8 @@ export const CLASSIFIER_CASES: ReadonlyArray<ClassifierCase> = [
     expectedTaskType: "bug-fix",
     expectedCategory: "development",
     expectedBand: "high",
+    expectedScore: 7,
+    expectedFallbackToGeneral: false,
     minConfidence: 80,
   },
   {
@@ -122,6 +129,8 @@ export const CLASSIFIER_CASES: ReadonlyArray<ClassifierCase> = [
     expectedTaskType: "general",
     expectedCategory: "general",
     expectedBand: "low",
+    expectedScore: 0,
+    expectedFallbackToGeneral: true,
     maxConfidence: 59,
   },
   {
