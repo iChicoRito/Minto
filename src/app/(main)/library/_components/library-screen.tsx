@@ -5,12 +5,25 @@ import { useState } from "react";
 import Link from "next/link";
 
 import { useLiveQuery } from "dexie-react-hooks";
-import { Copy, Edit3, FolderPlus, Heart, MoreHorizontal, Trash2 } from "lucide-react";
+import { Copy, Edit3, Folder, FolderPlus, Heart, MoreHorizontal, Tags, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useConfirm } from "@/hooks/use-confirm";
 import { filterLibraryPrompts, normalizeFolderName, normalizeTags } from "@/lib/browser-memory/record-utils";
 import type { SavedPrompt } from "@/lib/browser-memory/types";
 import type { PromptCategory } from "@/prompt-engine/types";
@@ -31,6 +44,7 @@ const VIEWS: readonly { value: View; label: string }[] = [
 
 function LibraryContent() {
   const { status, repository } = useMemory();
+  const { confirm, dialog } = useConfirm();
   const prompts = useLiveQuery(
     () => (status === "ready" ? repository.listPrompts() : Promise.resolve([])),
     [repository, status],
@@ -149,10 +163,14 @@ function LibraryContent() {
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => {
-              if (window.confirm("Delete this folder? Prompts will become Unfiled.")) {
-                void repository.deleteFolderAndUnassign(folderId).then(() => setFolderId(undefined));
-              }
+            onClick={async () => {
+              const confirmed = await confirm({
+                title: "Delete this folder?",
+                description: "Prompts will become Unfiled.",
+                confirmLabel: "Delete folder",
+                destructive: true,
+              });
+              if (confirmed) void repository.deleteFolderAndUnassign(folderId).then(() => setFolderId(undefined));
             }}
           >
             Delete selected folder
@@ -171,28 +189,83 @@ function LibraryContent() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4">
           {filtered.map((prompt) => (
             <Card key={prompt.id} size="sm">
               <CardHeader>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <CardTitle className="truncate text-sm">{prompt.title}</CardTitle>
-                    <p className="text-muted-foreground text-xs">
-                      {prompt.category} Â· {prompt.level}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={prompt.favorite ? "Remove favorite" : "Add favorite"}
-                    aria-pressed={prompt.favorite}
-                    onClick={() => void update(prompt.id, { favorite: !prompt.favorite, updatedAt: Date.now() })}
-                  >
-                    <Heart className={prompt.favorite ? "fill-current" : undefined} />
-                  </Button>
+                <div className="min-w-0">
+                  <CardTitle className="truncate text-sm">{prompt.title}</CardTitle>
+                  <p className="text-muted-foreground text-xs">
+                    {prompt.category} · {prompt.level}
+                  </p>
                 </div>
+                <CardAction>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button type="button" variant="ghost" size="icon-sm" aria-label="Prompt actions">
+                        <MoreHorizontal />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => void update(prompt.id, { favorite: !prompt.favorite, updatedAt: Date.now() })}
+                      >
+                        <Heart className={prompt.favorite ? "fill-current" : undefined} />
+                        {prompt.favorite ? "Remove favorite" : "Add favorite"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/?library=${prompt.id}`}>
+                          <Edit3 /> Open
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => void repository.duplicatePrompt(prompt.id)}>
+                        <Copy /> Duplicate
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => rename(prompt)}>Rename</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => editTags(prompt)}>
+                        <Tags /> Tags
+                      </DropdownMenuItem>
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <Folder /> Move to folder
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                          <DropdownMenuRadioGroup
+                            value={prompt.folderId ?? "unfiled"}
+                            onValueChange={(value) =>
+                              void update(prompt.id, {
+                                folderId: value === "unfiled" ? null : value,
+                                updatedAt: Date.now(),
+                              })
+                            }
+                          >
+                            <DropdownMenuRadioItem value="unfiled">Unfiled</DropdownMenuRadioItem>
+                            {folders.map((folder) => (
+                              <DropdownMenuRadioItem key={folder.id} value={folder.id}>
+                                {folder.name}
+                              </DropdownMenuRadioItem>
+                            ))}
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onClick={async () => {
+                          const confirmed = await confirm({
+                            title: "Delete this saved prompt?",
+                            description: "This cannot be undone.",
+                            confirmLabel: "Delete",
+                            destructive: true,
+                          });
+                          if (confirmed) void repository.deletePrompt(prompt.id);
+                        }}
+                      >
+                        <Trash2 /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </CardAction>
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="line-clamp-3 whitespace-pre-wrap text-sm">{prompt.enhancedPrompt}</p>
@@ -208,60 +281,12 @@ function LibraryContent() {
                     </span>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button asChild type="button" variant="outline" size="sm">
-                    <Link href={`/?library=${prompt.id}`}>
-                      <Edit3 /> Open
-                    </Link>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void repository.duplicatePrompt(prompt.id)}
-                  >
-                    <Copy /> Duplicate
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => rename(prompt)}>
-                    Rename
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => editTags(prompt)}>
-                    <MoreHorizontal /> Tags
-                  </Button>
-                  <Select
-                    value={prompt.folderId ?? "unfiled"}
-                    onValueChange={(value) =>
-                      void update(prompt.id, { folderId: value === "unfiled" ? null : value, updatedAt: Date.now() })
-                    }
-                  >
-                    <SelectTrigger aria-label={`Folder for ${prompt.title}`} size="sm" className="w-32 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent position="popper">
-                      <SelectItem value="unfiled">Unfiled</SelectItem>
-                      {folders.map((folder) => (
-                        <SelectItem key={folder.id} value={folder.id}>
-                          {folder.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      if (window.confirm("Delete this saved prompt?")) void repository.deletePrompt(prompt.id);
-                    }}
-                  >
-                    <Trash2 /> Delete
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
+      {dialog}
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import {
   ENHANCEMENT_API_VERSION,
   type EnhancementRequestV1,
-  EnhancementRequestV1Schema,
   type EnhancementSuccessV1,
   OPENROUTER_MODEL,
 } from "../../lib/ai-enhancement/contracts";
@@ -60,9 +59,7 @@ export function createOrchestrator(dependencies: OrchestratorDependencies): Enha
 
   return {
     async enhance(request: EnhancementRequestV1, context: OrchestrationContext): Promise<EnhancementSuccessV1> {
-      const trustedRequest = parseRequest(request);
-      const policy = resolvePolicy(trustedRequest);
-      const engineFacts = resolveEngineFacts(trustedRequest, policy);
+      const policy = resolvePolicy(request);
       const admission = await dependencies.admission.acquire();
 
       if (admission.status === "busy") throw new AdmissionBusyError(admission.retryAfterSeconds);
@@ -70,16 +67,25 @@ export function createOrchestrator(dependencies: OrchestratorDependencies): Enha
 
       try {
         let rawContent: string;
+        let engineFacts: ReturnType<typeof resolveEngineFacts>;
         try {
-          rawContent = await dependencies.model.complete(
+          // Dispatch the provider request before the remaining local work:
+          // the pure-engine facts only feed the response payload, so they are
+          // computed while the provider round trip is already in flight.
+          const modelPromise = dependencies.model.complete(
             {
               systemInstruction: buildSystemInstruction(policy),
-              userContent: JSON.stringify({ sourcePrompt: trustedRequest.prompt }),
+              userContent: JSON.stringify({ sourcePrompt: request.prompt }),
               reasoningEffort: policy.reasoningEffort,
               completionBudget: policy.completionBudget,
             },
             { signal: context.signal, onMetadata: context.onCompletionMetadata },
           );
+          // Guard against an unhandled rejection when the synchronous engine
+          // work below fails before the model result is awaited.
+          void modelPromise.catch(() => undefined);
+          engineFacts = resolveEngineFacts(request, policy);
+          rawContent = await modelPromise;
         } catch (error) {
           throw normalizeProviderFailure(error);
         }
@@ -148,14 +154,10 @@ export function buildSystemInstruction(policy: ResolvedEnhancementPolicy): strin
   ].join("\n");
 }
 
-function parseRequest(request: EnhancementRequestV1): EnhancementRequestV1 {
-  const parsed = EnhancementRequestV1Schema.safeParse(request);
-  if (!parsed.success) throw new AiInputError();
-  return parsed.data;
-}
-
 function resolvePolicy(request: EnhancementRequestV1): ResolvedEnhancementPolicy {
   try {
+    // resolveTrustedPolicy performs the strict schema validation itself, so a
+    // direct call with an untrusted request still fails closed as AiInputError.
     return resolveTrustedPolicy(request);
   } catch {
     throw new AiInputError();

@@ -4,11 +4,8 @@ import { useEffect, useReducer, useRef, useState } from "react";
 
 import { toast } from "sonner";
 
-import {
-  AiEnhancementClientError,
-  createAiEnhancementClient,
-  type EnhancementService,
-} from "@/lib/ai-enhancement/client";
+import { useConfirm } from "@/hooks/use-confirm";
+import { createAiEnhancementClient, type EnhancementService } from "@/lib/ai-enhancement/client";
 import { ENHANCEMENT_API_VERSION } from "@/lib/ai-enhancement/contracts";
 import { createDeterministicEnhancementService } from "@/lib/ai-enhancement/deterministic-service";
 import { copyText, requestTextDownload } from "@/lib/browser-actions.client";
@@ -19,6 +16,13 @@ import { getPromptPreset } from "@/lib/prompt-presets";
 import { enhancePrompt, validatePrompt } from "@/prompt-engine";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
+import {
+  describeCode,
+  describeError,
+  enhancementErrorCode,
+  HOURLY_LIMIT_MESSAGE,
+  isHourlyLimitReached,
+} from "./enhancement-errors";
 import { useMemory } from "./memory-provider";
 import { PromptInputPanel } from "./prompt-input-panel";
 import { ResultPanel } from "./result-panel";
@@ -29,71 +33,6 @@ import { createWorkspaceState, documentFromEnhancement, workspaceReducer } from 
 const ENDPOINT =
   process.env.NEXT_PUBLIC_ENHANCEMENT_API_URL || (process.env.NODE_ENV === "development" ? "/api/enhance" : null);
 
-/** Availability and contract failures may be answered with the explicit local-rules action. */
-const FALLBACK_ELIGIBLE_CODES = new Set([
-  "service_disabled",
-  "service_unavailable",
-  "service_busy",
-  "provider_timeout",
-  "provider_rate_limited",
-  "provider_unavailable",
-  "model_unavailable",
-  "priced_route_unavailable",
-  "provider_refused",
-  "invalid_provider_response",
-  "output_too_large",
-  "network",
-  "timeout",
-  "invalid_response",
-]);
-
-function describeError(error: unknown): { message: string; retryable: boolean; fallbackEligible: boolean } {
-  if (error instanceof AiEnhancementClientError) {
-    const message = describeCode(error.code);
-    return {
-      message,
-      retryable: error.retryable || error.code === "timeout" || error.code === "network",
-      fallbackEligible: FALLBACK_ELIGIBLE_CODES.has(error.code),
-    };
-  }
-  return { message: describeCode("internal_error"), retryable: true, fallbackEligible: true };
-}
-
-function describeCode(code: string): string {
-  switch (code) {
-    case "invalid_endpoint":
-    case "forbidden_origin":
-      return "The enhancement service is not configured for this site.";
-    case "service_disabled":
-      return "AI enhancement is unavailable right now.";
-    case "service_unavailable":
-      return "AI enhancement is temporarily unavailable.";
-    case "service_busy":
-      return "AI enhancement is busy. Please try again shortly.";
-    case "provider_timeout":
-    case "timeout":
-      return "The AI provider timed out. Please try again.";
-    case "provider_rate_limited":
-      return "The AI provider is rate limited. Please try again later.";
-    case "provider_unavailable":
-    case "network":
-      return "The enhancement service could not be reached.";
-    case "model_unavailable":
-      return "The AI model is currently unavailable.";
-    case "priced_route_unavailable":
-      return "The zero-cost AI route is currently unavailable.";
-    case "provider_refused":
-      return "The AI provider rejected this prompt.";
-    case "invalid_provider_response":
-    case "invalid_response":
-      return "The AI returned an invalid response. Please try again.";
-    case "output_too_large":
-      return "The AI returned too much output for this prompt.";
-    default:
-      return "AI enhancement failed. Please try again.";
-  }
-}
-
 export function EnhancerWorkspace() {
   const defaultLevel = usePreferencesStore((state) => state.defaultEnhancementLevel);
   const defaultSections = usePreferencesStore((state) => state.defaultPromptSections);
@@ -101,6 +40,7 @@ export function EnhancerWorkspace() {
   const historyMaxEntries = usePreferencesStore((state) => state.historyMaxEntries);
   const preferencesSynced = usePreferencesStore((state) => state.isSynced);
   const { status: memoryStatus, repository } = useMemory();
+  const { confirm, dialog } = useConfirm();
   const [historyPending, setHistoryPending] = useState(false);
   const [savePending, setSavePending] = useState(false);
   const [fallbackPending, setFallbackPending] = useState(false);
@@ -258,7 +198,15 @@ export function EnhancerWorkspace() {
       dispatch({ type: "input-error", message: validation.message });
       return;
     }
-    if (state.document?.dirty && !window.confirm("Replace your unsaved edits with a new enhancement?")) return;
+    if (
+      state.document?.dirty &&
+      !(await confirm({
+        title: "Replace your unsaved edits?",
+        description: "A new enhancement will replace your current edits.",
+        confirmLabel: "Replace",
+      }))
+    )
+      return;
 
     const runId = crypto.randomUUID();
     const controller = new AbortController();
@@ -278,9 +226,6 @@ export function EnhancerWorkspace() {
       );
       const document = documentFromEnhancement(runId, state.prompt, state.controls, response.result);
       dispatch({ type: "enhancement-succeeded", runId, document });
-      toast.success(
-        document.generation.kind === "ai" ? "Prompt enhanced with Ox Alpha." : "Prompt enhanced with local rules.",
-      );
 
       const record: HistoryRecord = {
         id: crypto.randomUUID(),
@@ -304,7 +249,11 @@ export function EnhancerWorkspace() {
       }
       const described = describeError(error);
       dispatch({ type: "enhancement-failed", runId, error: described });
-      toast.error(described.message);
+      // Exhausting the hourly allowance is an expected situation, not a
+      // failure of the user's prompt: surface it as a friendly notice while
+      // the canvas still offers retry and the local-rules fallback.
+      if (isHourlyLimitReached(enhancementErrorCode(error))) toast.warning(HOURLY_LIMIT_MESSAGE);
+      else toast.error(described.message);
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
     }
@@ -430,6 +379,7 @@ export function EnhancerWorkspace() {
           fallbackPending={fallbackPending}
         />
       </div>
+      {dialog}
     </div>
   );
 }

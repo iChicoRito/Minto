@@ -19,13 +19,13 @@ import {
 import { enhanceDeterministically } from "../lib/ai-enhancement/deterministic-service";
 import { getPromptPreset, PROMPT_PRESET_IDS, PROMPT_PRESETS } from "../lib/prompt-presets";
 import type { EnhancementLevel, PromptCategory, PromptTaskType, SectionId } from "../prompt-engine";
-import { resolveTemplate } from "../prompt-engine";
+import { enhancePrompt, resolveTemplate } from "../prompt-engine";
 import { SECTION_TITLES } from "../prompt-engine/templates/template-types";
 import { DEFAULT_OPENROUTER_TIMEOUT_MS, getAiConfig } from "../server/ai/config";
 import { createAiHttpHandler } from "../server/ai/http-handler";
 import { type GeneratedDocument, parseModelDocument, renderGeneratedMarkdown } from "../server/ai/model-output";
 import { createOpenRouterAdapter } from "../server/ai/openrouter-adapter";
-import { buildSystemInstruction } from "../server/ai/orchestrator";
+import { buildSystemInstruction, createOrchestrator } from "../server/ai/orchestrator";
 import { resolveTrustedPolicy } from "../server/ai/policy-resolver";
 import {
   MANUAL_TASK_POLICIES,
@@ -2522,6 +2522,99 @@ export const AI_CASES = [
         if (previous.ALLOWED_ORIGIN === undefined) delete process.env.ALLOWED_ORIGIN;
         else process.env.ALLOWED_ORIGIN = previous.ALLOWED_ORIGIN;
       }
+    },
+  },
+  {
+    name: "orchestrator dispatches the provider before local facts and keeps payloads stable",
+    run: async () => {
+      const order: string[] = [];
+      const seenInputs: Array<{
+        systemInstruction: string;
+        userContent: string;
+        reasoningEffort: string;
+        completionBudget: number;
+      }> = [];
+      const orchestrator = createOrchestrator({
+        admission: {
+          acquire: async () => {
+            order.push("acquire");
+            return {
+              status: "admitted" as const,
+              leaseId: "lease-order",
+              expiresAt: 1,
+              retryAfterMs: 0,
+              retryAfterSeconds: 0,
+              activeCount: 1,
+              prunedCount: 0,
+            };
+          },
+          release: async () => {
+            order.push("release");
+          },
+        },
+        model: {
+          complete: async (input) => {
+            order.push("model-start");
+            seenInputs.push(input);
+            return JSON.stringify({ sections: [{ id: "objective", content: ["Fix the login flow."] }] });
+          },
+        },
+        requestId: () => "req-order",
+      });
+      const request = policyRequest({ kind: "manual", taskType: "bug-fix" }, { sections: ["objective"] });
+      const result = await orchestrator.enhance(request, { signal: new AbortController().signal });
+
+      // The lease is taken first, the provider request is dispatched before
+      // any remaining local work, and the lease is always released.
+      assert.deepEqual(order, ["acquire", "model-start", "release"]);
+
+      // The provider receives exactly the trusted instruction and content.
+      assert.equal(seenInputs.length, 1);
+      assert.equal(seenInputs[0].systemInstruction.includes("State the intended fix"), true);
+      assert.equal(seenInputs[0].systemInstruction.includes("fix the login flow"), false);
+      assert.equal(seenInputs[0].userContent.includes("fix the login flow"), true);
+      assert.equal(seenInputs[0].reasoningEffort, "high");
+      assert.equal(seenInputs[0].completionBudget, 8192);
+
+      // The success payload stays exactly the pure-engine facts plus the
+      // canonicalized render of the model output.
+      const engine = enhancePrompt(request.prompt, { level: "standard", taskType: "bug-fix", sections: ["objective"] });
+      assert.deepEqual(result.result.analysis, engine.analysis);
+      assert.deepEqual(result.result.classification, engine.classification);
+      assert.deepEqual(result.result.resolved.sections, ["objective"]);
+      assert.deepEqual(result.result.generation, { kind: "ai", provider: "openrouter", model: OPENROUTER_MODEL });
+      assert.equal(result.ok, true);
+      assert.match(result.result.markdown, /^# Objective\n\nFix the login flow\.$/);
+
+      // Invalid requests still fail closed as invalid_request with no provider call.
+      let guardedProviderCalls = 0;
+      const guarded = createOrchestrator({
+        admission: {
+          acquire: async () => ({
+            status: "admitted" as const,
+            leaseId: "lease-guarded",
+            expiresAt: 1,
+            retryAfterMs: 0,
+            retryAfterSeconds: 0,
+            activeCount: 1,
+            prunedCount: 0,
+          }),
+          release: async () => {
+            // Lease expiry is the crash-safe cleanup path in this stub.
+          },
+        },
+        model: {
+          complete: async () => {
+            guardedProviderCalls += 1;
+            return "{}";
+          },
+        },
+      });
+      await assert.rejects(
+        guarded.enhance({ ...request, prompt: "" }, { signal: new AbortController().signal }),
+        (error: { code?: string }) => error.code === "invalid_request",
+      );
+      assert.equal(guardedProviderCalls, 0);
     },
   },
 ] as const;

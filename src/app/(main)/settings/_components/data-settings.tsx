@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 
-import { Download, Eraser, FileInput, Trash2 } from "lucide-react";
+import { Download, FileInput, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { useConfirm } from "@/hooks/use-confirm";
 import { exportLocalMemory, readBackupFile, restoreLocalMemory } from "@/lib/browser-memory/backup.client";
 import type { BackupPreview, ParsedBackup } from "@/lib/browser-memory/backup-schema";
 import type { MemoryRepository } from "@/lib/browser-memory/repository.client";
@@ -34,6 +35,7 @@ export function DataSettings({
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const ready = memoryStatus === "ready";
+  const { confirm, dialog } = useConfirm();
 
   const runAction = async (
     key: string,
@@ -58,9 +60,14 @@ export function DataSettings({
     runAction(
       "clear-history",
       async () => {
-        if (!ready || !window.confirm("Clear local history? Saved library prompts will remain.")) {
-          throw new Error("cancelled");
-        }
+        if (!ready) throw new Error("cancelled");
+        const confirmed = await confirm({
+          title: "Clear local history?",
+          description: "Saved library prompts will remain.",
+          confirmLabel: "Clear history",
+          destructive: true,
+        });
+        if (!confirmed) throw new Error("cancelled");
         await repository.clearHistory();
       },
       "Local history cleared.",
@@ -71,9 +78,14 @@ export function DataSettings({
     runAction(
       "clear-library",
       async () => {
-        if (!ready || !window.confirm("Clear the local library and folders? History will remain.")) {
-          throw new Error("cancelled");
-        }
+        if (!ready) throw new Error("cancelled");
+        const confirmed = await confirm({
+          title: "Clear the local library and folders?",
+          description: "History will remain.",
+          confirmLabel: "Clear library",
+          destructive: true,
+        });
+        if (!confirmed) throw new Error("cancelled");
         await repository.clearLibrary();
       },
       "Local library and folders cleared.",
@@ -100,9 +112,12 @@ export function DataSettings({
   const confirmImport = async () => {
     if (!pending || !ready) return;
     const { preview, backup } = pending;
-    const confirmed = window.confirm(
-      `Replace local data with this backup? ${preview.historyCount} history entries, ${preview.promptCount} prompts, and ${preview.folderCount} folders will be restored.`,
-    );
+    const confirmed = await confirm({
+      title: "Replace local data with this backup?",
+      description: `${preview.historyCount} history entries, ${preview.promptCount} prompts, and ${preview.folderCount} folders will be restored.`,
+      confirmLabel: "Restore backup",
+      destructive: true,
+    });
     if (!confirmed) return;
     await runAction(
       "restore",
@@ -219,6 +234,7 @@ export function DataSettings({
           )}
         </CardContent>
       </Card>
+      {dialog}
     </div>
   );
 }

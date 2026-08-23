@@ -67,7 +67,7 @@ const sectionIdSchema = z.enum(SECTION_ID_VALUES);
 
 const selectedSectionsSchema = z
   .array(sectionIdSchema)
-  .min(1)
+  .min(0)
   .max(MAX_SELECTED_SECTIONS)
   .superRefine((sections, context) => {
     if (new Set(sections).size !== sections.length) {

@@ -10,9 +10,9 @@ import { MemoryProvider } from "./_components/memory-provider";
 import { AppSidebar } from "./_components/sidebar/app-sidebar";
 
 export const metadata: Metadata = {
-  title: "Prompt Enhancer",
+  title: "Minto",
   description:
-    "Turn rough instructions into well-structured prompts with a local rule engine or optional AI enhancement.",
+    "Turn rough instructions into well-structured prompts with a local rule engine or optional online enhancement.",
 };
 
 // Static by design: no cookies()/dynamic APIs here — sidebar defaults are

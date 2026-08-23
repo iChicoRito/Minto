@@ -75,11 +75,18 @@ export function resolveTrustedPolicy(request: EnhancementRequestV1): ResolvedEnh
 
   // Requested sections outside the resolved task policy are dropped, never
   // honored: the browser can suggest only known ids, and the trusted policy
-  // decides which of them apply. The schema guarantees at least one requested
-  // id, so when everything the user picked is outside the policy we fall back
-  // to the policy's first canonical section rather than enhancing nothing.
-  const resolvedSectionIds = allowedIds.filter((sectionId) => selected.has(sectionId));
-  const effectiveIds = resolvedSectionIds.length > 0 ? resolvedSectionIds : allowedIds.slice(0, 1);
+  // decides which of them apply. An explicitly empty request relies on the
+  // picked prompt type and enhances with its full canonical section set; a
+  // non-empty request that matches nothing falls back to the policy's first
+  // canonical section rather than enhancing into an empty document.
+  const requestedIds = trusted.sections;
+  const resolvedSectionIds = requestedIds.length === 0 ? [] : allowedIds.filter((sectionId) => selected.has(sectionId));
+  const effectiveIds =
+    requestedIds.length === 0
+      ? [...allowedIds]
+      : resolvedSectionIds.length > 0
+        ? resolvedSectionIds
+        : allowedIds.slice(0, 1);
   const config = levelConfig(trusted.level);
   return {
     presetId,

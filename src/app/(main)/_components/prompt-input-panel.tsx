@@ -88,14 +88,14 @@ export function PromptInputPanel({
           Your Prompt
         </h2>
         <p className="text-muted-foreground text-sm">
-          Start with rough wording. AI enhances it according to your selected preset, type, and level.
+          Start with rough wording. Your prompt type and level shape the enhancement.
         </p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="prompt-input">Prompt</Label>
         <Textarea
           id="prompt-input"
-          className="min-h-44 resize-y"
+          className="max-h-64 min-h-44 resize-y overflow-y-auto field-sizing-fixed"
           placeholder="Describe what you want to accomplish..."
           value={prompt}
           onChange={(event) => dispatch({ type: "prompt-changed", prompt: event.target.value })}
@@ -159,10 +159,6 @@ export function PromptInputPanel({
                   checked={checked}
                   disabled={running}
                   onCheckedChange={() => {
-                    if (checked && controls.sections.length === 1) {
-                      toast.warning("Keep at least one section selected.");
-                      return;
-                    }
                     const sections = checked
                       ? controls.sections.filter((item) => item !== section.value)
                       : [...controls.sections, section.value];

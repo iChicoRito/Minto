@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useConfirm } from "@/hooks/use-confirm";
 import { defaultPreferenceSnapshot, PREFERENCE_SNAPSHOT_KEYS } from "@/lib/preferences/preference-snapshot";
 import { persistPreference } from "@/lib/preferences/preferences-storage";
 import {
@@ -34,6 +35,7 @@ const SECTION_LABELS: Record<PromptPreferenceSectionId, string> = {
 export function SettingsScreen() {
   const preferences = usePreferencesStore((state) => state);
   const { status: memoryStatus, repository } = useMemory();
+  const { confirm, dialog } = useConfirm();
   const [message, setMessage] = useState<string | null>(null);
 
   const save = (key: Parameters<typeof persistPreference>[0], value: string) => {
@@ -62,7 +64,13 @@ export function SettingsScreen() {
   };
 
   const clearAll = async () => {
-    if (!window.confirm("Clear all local prompts, history, folders, and settings? This cannot be undone.")) return;
+    const confirmed = await confirm({
+      title: "Clear all local data?",
+      description: "Clear all local prompts, history, folders, and settings? This cannot be undone.",
+      confirmLabel: "Clear everything",
+      destructive: true,
+    });
+    if (!confirmed) return;
     try {
       await repository.clearAll();
       const defaults = defaultPreferenceSnapshot();
@@ -215,6 +223,7 @@ export function SettingsScreen() {
           {message}
         </p>
       )}
+      {dialog}
     </div>
   );
 }

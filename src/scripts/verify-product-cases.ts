@@ -1,5 +1,13 @@
+import {
+  describeCode,
+  describeError,
+  enhancementErrorCode,
+  HOURLY_LIMIT_MESSAGE,
+  isHourlyLimitReached,
+} from "../app/(main)/_components/enhancement-errors";
 import { createWorkspaceState, workspaceReducer } from "../app/(main)/_components/workspace-state";
 import { getMarkdownCounts, prefixSelectedLines, wrapSelection } from "../components/markdown/markdown-editor-utils";
+import { AiEnhancementClientError } from "../lib/ai-enhancement/client";
 import { parseBackup } from "../lib/browser-memory/backup-schema";
 import { filterLibraryPrompts, normalizeTags, titleFromPrompt } from "../lib/browser-memory/record-utils";
 import { defaultPreferenceSnapshot } from "../lib/preferences/preference-snapshot";
@@ -326,6 +334,140 @@ export const PRODUCT_CASES = [
         },
       });
       if (!("error" in forged)) throw new Error("forged provenance was accepted");
+    },
+  },
+  {
+    name: "enhancement error copy stays plain and pins every user-facing string",
+    run: () => {
+      const expectedMessages = {
+        invalid_endpoint: "The enhancement service is not configured for this site.",
+        forbidden_origin: "The enhancement service is not configured for this site.",
+        service_disabled: "Enhancement is unavailable right now.",
+        service_unavailable: "Enhancement is temporarily unavailable.",
+        service_busy: "The enhancement service is busy. Please try again shortly.",
+        provider_timeout: "The enhancement service timed out. Please try again.",
+        timeout: "The enhancement service timed out. Please try again.",
+        provider_rate_limited: HOURLY_LIMIT_MESSAGE,
+        provider_unavailable: "The enhancement service could not be reached.",
+        network: "The enhancement service could not be reached.",
+        model_unavailable: "The enhancement service is currently unavailable.",
+        priced_route_unavailable: "The free enhancement route is currently unavailable.",
+        provider_refused: "The request was rejected. Please adjust the prompt and try again.",
+        invalid_provider_response: "Try again.",
+        invalid_response: "Try again.",
+        output_too_large: "The response exceeded its size limit. Try a shorter prompt.",
+        internal_error: "Enhancement failed. Please try again.",
+        some_unknown_code: "Enhancement failed. Please try again.",
+      } as const;
+      for (const [code, message] of Object.entries(expectedMessages)) {
+        if (describeCode(code) !== message) throw new Error(`user-facing message drifted for code: ${code}`);
+      }
+      // No technical leakage anywhere in surfaced copy.
+      for (const message of Object.values(expectedMessages)) {
+        if (/\b(?:429|503|500|http|header|quota|retry.?after|openrouter|status)\b/i.test(message)) {
+          throw new Error(`technical wording leaked into: ${message}`);
+        }
+      }
+    },
+  },
+  {
+    name: "hourly usage limit surfaces the friendly notice without technical details",
+    run: () => {
+      if (HOURLY_LIMIT_MESSAGE !== "You've reached your enhancement limit for this hour. Please try again later.") {
+        throw new Error("hourly-limit wording drifted");
+      }
+      const error = new AiEnhancementClientError("provider_rate_limited", "upstream quota metadata", {
+        retryable: true,
+        retryAfterSeconds: 600,
+      });
+      const described = describeError(error);
+      if (described.message !== HOURLY_LIMIT_MESSAGE) throw new Error("rate-limited failure used the wrong copy");
+      if (!described.retryable || !described.fallbackEligible) throw new Error("rate-limited failure lost fallback");
+      if (!isHourlyLimitReached(enhancementErrorCode(error))) throw new Error("hourly-limit detection failed");
+      // Raw upstream text and retry metadata must never reach the message.
+      if (described.message.includes("upstream") || described.message.includes("600")) {
+        throw new Error("technical details leaked into the hourly-limit notice");
+      }
+    },
+  },
+  {
+    name: "remaining failures surface only generic friendly messages with no raw errors",
+    run: () => {
+      const rawFailure = new Error("TypeError: cannot read properties of undefined in adapter.ts:42");
+      const described = describeError(rawFailure);
+      if (described.message !== "Enhancement failed. Please try again.") throw new Error("generic default drifted");
+      if (described.message.includes("TypeError") || described.message.includes("adapter.ts")) {
+        throw new Error("raw error output leaked to the UI");
+      }
+      if (enhancementErrorCode(rawFailure) !== undefined) throw new Error("non-client error produced a code");
+
+      const invalidResponse = new AiEnhancementClientError("invalid_response", "unexpected token at byte 0", {});
+      if (describeError(invalidResponse).message !== "Try again.") throw new Error("invalid-response copy drifted");
+    },
+  },
+  {
+    name: "canvas spinner visibility follows the workspace running status exactly",
+    run: () => {
+      const initial = createWorkspaceState({
+        taskType: "auto",
+        level: "standard",
+        sections: ["objective"],
+        presetId: null,
+      });
+      if (initial.status === "running") throw new Error("spinner condition true while idle");
+      const started = workspaceReducer(initial, { type: "enhancement-started", runId: "run-spin" });
+      if (started.status !== "running") throw new Error("spinner condition false while enhancing");
+      const succeeded = workspaceReducer(started, {
+        type: "enhancement-succeeded",
+        runId: "run-spin",
+        document: {
+          runId: "run-spin",
+          originalPrompt: "fix login",
+          controls: initial.controls,
+          analysis: {} as never,
+          classification: {} as never,
+          resolved: {} as never,
+          generation: { kind: "deterministic" },
+          generatedMarkdown: "# Objective\n\nFix login.",
+          markdown: "# Objective\n\nFix login.",
+          historyId: null,
+          libraryPromptId: null,
+          dirty: false,
+          stale: false,
+        },
+      });
+      if (succeeded.status === "running") throw new Error("spinner stayed visible after success");
+      const restarted = workspaceReducer(succeeded, { type: "enhancement-started", runId: "run-spin-2" });
+      const failed = workspaceReducer(restarted, {
+        type: "enhancement-failed",
+        runId: "run-spin-2",
+        error: { message: "Try again.", retryable: true, fallbackEligible: true },
+      });
+      if (failed.status === "running") throw new Error("spinner stayed visible after failure");
+      const restartedAgain = workspaceReducer(failed, { type: "enhancement-started", runId: "run-spin-3" });
+      const cancelled = workspaceReducer(restartedAgain, { type: "enhancement-cancelled", runId: "run-spin-3" });
+      if (cancelled.status === "running") throw new Error("spinner stayed visible after cancel");
+    },
+  },
+  {
+    name: "intent fidelity keeps enhanced output derived from the user input alone",
+    run: () => {
+      const intents = [
+        { input: "fix navbar overflow on mobile", marker: "navbar overflow on mobile" },
+        { input: "summarize the quarterly revenue report", marker: "quarterly revenue report" },
+        { input: "research electric vehicle battery technology", marker: "electric vehicle battery technology" },
+        { input: "image prompt for a snowy mountain cabin at dusk", marker: "snowy mountain cabin" },
+      ];
+      const outputs = intents.map(({ input }) => enhancePrompt(input, { level: "light" }).markdown);
+      intents.forEach(({ marker }, index) => {
+        if (!outputs[index].includes(marker)) throw new Error(`output dropped the user's subject: ${marker}`);
+        const unrelated = intents[(index + 1) % intents.length].marker;
+        if (outputs[index].includes(unrelated)) throw new Error(`output invented unrelated content: ${unrelated}`);
+      });
+      // The bounded generic fallback stays restrained instead of growing filler.
+      const generic = enhancePrompt("fix it").markdown;
+      if (!generic.includes("Resolve the described issue.")) throw new Error("generic objective drifted");
+      if (!generic.includes("Confirm that the issue is resolved.")) throw new Error("generic verification drifted");
     },
   },
 ] as const;

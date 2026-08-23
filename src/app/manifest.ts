@@ -6,9 +6,9 @@ export const dynamic = "force-static";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Prompt Enhancer",
-    short_name: "Prompt Enhancer",
-    description: "Turn rough instructions into structured prompts with local rules or optional AI enhancement.",
+    name: "Minto",
+    short_name: "Minto",
+    description: "Turn rough instructions into structured prompts with local rules or optional online enhancement.",
     start_url: `${basePath}/`,
     scope: `${basePath}/`,
     display: "standalone",

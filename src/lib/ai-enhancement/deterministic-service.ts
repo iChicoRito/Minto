@@ -35,10 +35,13 @@ export function enhanceDeterministically(
         ? undefined
         : request.selection.taskType;
 
+  // An explicitly empty selection relies on the picked prompt type: omitting
+  // the section list lets the engine's template-driven rules choose the
+  // sections for the level and parsed content.
   const engine = enhancePrompt(request.prompt, {
     level,
     ...(explicitTaskType === undefined ? {} : { taskType: explicitTaskType }),
-    sections: [...request.sections],
+    sections: request.sections.length > 0 ? [...request.sections] : undefined,
   });
 
   return {

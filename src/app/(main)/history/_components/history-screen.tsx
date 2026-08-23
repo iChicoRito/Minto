@@ -3,10 +3,18 @@
 import Link from "next/link";
 
 import { useLiveQuery } from "dexie-react-hooks";
-import { Copy, Download, ExternalLink, Save, Trash2 } from "lucide-react";
+import { Copy, Download, ExternalLink, MoreHorizontal, Save, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useConfirm } from "@/hooks/use-confirm";
 import { copyText } from "@/lib/browser-actions.client";
 import { exportLocalMemory } from "@/lib/browser-memory/backup.client";
 import type { HistoryRecord } from "@/lib/browser-memory/types";
@@ -28,6 +36,7 @@ function dayLabel(timestamp: number): string {
 function HistoryContent() {
   const { status, repository } = useMemory();
   const historyMaxEntries = usePreferencesStore((state) => state.historyMaxEntries);
+  const { confirm, dialog } = useConfirm();
   const records = useLiveQuery(
     () => (status === "ready" ? repository.listHistory() : Promise.resolve([])),
     [repository, status],
@@ -72,9 +81,14 @@ function HistoryContent() {
             variant="destructive"
             size="sm"
             disabled={records.length === 0}
-            onClick={() => {
-              if (window.confirm("Clear all local history? Saved library prompts will remain."))
-                void repository.clearHistory();
+            onClick={async () => {
+              const confirmed = await confirm({
+                title: "Clear all local history?",
+                description: "Saved library prompts will remain.",
+                confirmLabel: "Clear history",
+                destructive: true,
+              });
+              if (confirmed) void repository.clearHistory();
             }}
           >
             <Trash2 /> Clear history
@@ -97,44 +111,56 @@ function HistoryContent() {
               <Card key={record.id} size="sm">
                 <CardHeader className="gap-1">
                   <CardTitle className="truncate text-sm">{record.originalPrompt}</CardTitle>
+                  <CardAction>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button type="button" variant="ghost" size="icon-sm" aria-label="History actions">
+                          <MoreHorizontal />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/?history=${record.id}`}>
+                            <ExternalLink /> Open
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => void copy(record)}>
+                          <Copy /> Copy
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => void repository.promoteHistory(record.id)}>
+                          <Save /> Save to Library
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={async () => {
+                            const confirmed = await confirm({
+                              title: "Delete this history entry?",
+                              description: "This cannot be undone.",
+                              confirmLabel: "Delete",
+                              destructive: true,
+                            });
+                            if (confirmed) void repository.deleteHistory(record.id);
+                          }}
+                        >
+                          <Trash2 /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </CardAction>
+                </CardHeader>
+                <CardContent>
                   <p className="text-muted-foreground text-xs">
                     {record.taskType} · {record.level} ·{" "}
                     {new Intl.DateTimeFormat(undefined, { timeStyle: "short" }).format(record.createdAt)}
                   </p>
-                </CardHeader>
-                <CardContent className="flex flex-wrap gap-2">
-                  <Button asChild type="button" variant="outline" size="sm">
-                    <Link href={`/?history=${record.id}`}>
-                      <ExternalLink /> Open
-                    </Link>
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => void copy(record)}>
-                    <Copy /> Copy
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void repository.promoteHistory(record.id)}
-                  >
-                    <Save /> Save to Library
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      if (window.confirm("Delete this history entry?")) void repository.deleteHistory(record.id);
-                    }}
-                  >
-                    <Trash2 /> Delete
-                  </Button>
                 </CardContent>
               </Card>
             ))}
           </section>
         ))
       )}
+      {dialog}
     </div>
   );
 }

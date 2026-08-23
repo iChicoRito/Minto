@@ -29,7 +29,7 @@ const TASK_LABELS: Record<string, string> = {
 
 function sourceLabel(state: WorkspaceState): string | null {
   if (!state.document) return null;
-  return state.document.generation.kind === "ai" ? "AI · Ox Alpha" : "Local rules fallback";
+  return state.document.generation.kind === "ai" ? "Enhanced" : "Local rules";
 }
 
 export function ResultPanel({
@@ -67,6 +67,11 @@ export function ResultPanel({
         </CardHeader>
         <CardContent className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted-foreground">
           <p>Your enhanced prompt will appear here.</p>
+          {state.status === "running" && (
+            <p className="flex items-center gap-2 text-muted-foreground text-sm" role="status">
+              <Spinner /> Enhancing your prompt...
+            </p>
+          )}
           {state.error?.fallbackEligible && (
             <>
               <p className="text-destructive" role="alert">
