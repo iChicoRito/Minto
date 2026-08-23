@@ -2555,12 +2555,20 @@ export const AI_CASES = [
           complete: async (input) => {
             order.push("model-start");
             seenInputs.push(input);
-            return JSON.stringify({ sections: [{ id: "objective", content: ["Fix the login flow."] }] });
+            return JSON.stringify({
+              sections: [
+                { id: "objective", content: ["Fix the login flow."] },
+                { id: "requirements", content: ["Keep the API stable."] },
+              ],
+            });
           },
         },
         requestId: () => "req-order",
       });
-      const request = policyRequest({ kind: "manual", taskType: "bug-fix" }, { sections: ["objective"] });
+      const request = policyRequest(
+        { kind: "manual", taskType: "bug-fix" },
+        { sections: ["objective", "requirements"] },
+      );
       const result = await orchestrator.enhance(request, { signal: new AbortController().signal });
 
       // The lease is taken first, the provider request is dispatched before
@@ -2577,13 +2585,20 @@ export const AI_CASES = [
 
       // The success payload stays exactly the pure-engine facts plus the
       // canonicalized render of the model output.
-      const engine = enhancePrompt(request.prompt, { level: "standard", taskType: "bug-fix", sections: ["objective"] });
+      const engine = enhancePrompt(request.prompt, {
+        level: "standard",
+        taskType: "bug-fix",
+        sections: ["objective", "requirements"],
+      });
       assert.deepEqual(result.result.analysis, engine.analysis);
       assert.deepEqual(result.result.classification, engine.classification);
-      assert.deepEqual(result.result.resolved.sections, ["objective"]);
+      assert.deepEqual(result.result.resolved.sections, ["objective", "requirements"]);
       assert.deepEqual(result.result.generation, { kind: "ai", provider: "openrouter", model: OPENROUTER_MODEL });
       assert.equal(result.ok, true);
-      assert.match(result.result.markdown, /^# Objective\n\nFix the login flow\.$/);
+      assert.match(
+        result.result.markdown,
+        /^# Objective\n\nFix the login flow\.\n\n## Requirements\n\n- Keep the API stable\.$/,
+      );
 
       // Invalid requests still fail closed as invalid_request with no provider call.
       let guardedProviderCalls = 0;
