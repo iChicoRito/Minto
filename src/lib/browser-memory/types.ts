@@ -1,5 +1,6 @@
 import type { SectionId } from "../../prompt-engine/templates/template-types";
 import type { EnhancementLevel, PromptCategory, PromptTaskType } from "../../prompt-engine/types";
+import type { GenerationDescriptor } from "../ai-enhancement/contracts";
 import type { PromptPresetId } from "../prompt-presets";
 
 export type HistoryRecord = {
@@ -13,6 +14,7 @@ export type HistoryRecord = {
   level: EnhancementLevel;
   sectionIds: SectionId[];
   presetId: PromptPresetId | null;
+  generation?: GenerationDescriptor;
 };
 
 export type SavedPrompt = {
@@ -32,6 +34,7 @@ export type SavedPrompt = {
   favorite: boolean;
   folderId: string | null;
   tags: string[];
+  generation?: GenerationDescriptor;
 };
 
 export type FolderRecord = {

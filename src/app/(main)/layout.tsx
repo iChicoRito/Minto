@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { Toaster } from "@/components/ui/sonner";
 
 import { MemoryProvider } from "./_components/memory-provider";
 import { AppSidebar } from "./_components/sidebar/app-sidebar";
@@ -11,7 +12,7 @@ import { AppSidebar } from "./_components/sidebar/app-sidebar";
 export const metadata: Metadata = {
   title: "Prompt Enhancer",
   description:
-    "Turn rough instructions into well-structured prompts — local-first, rule-based, nothing leaves your browser.",
+    "Turn rough instructions into well-structured prompts with a local rule engine or optional AI enhancement.",
 };
 
 // Static by design: no cookies()/dynamic APIs here — sidebar defaults are
@@ -28,6 +29,7 @@ export default function Layout({ children }: Readonly<{ children: ReactNode }>) 
         <main className="flex-1 p-4 md:p-6">
           <MemoryProvider>{children}</MemoryProvider>
         </main>
+        <Toaster richColors />
       </SidebarInset>
     </SidebarProvider>
   );

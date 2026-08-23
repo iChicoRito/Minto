@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Prompt Enhancer",
     short_name: "Prompt Enhancer",
-    description: "Turn rough instructions into structured prompts locally.",
+    description: "Turn rough instructions into structured prompts with local rules or optional AI enhancement.",
     start_url: `${basePath}/`,
     scope: `${basePath}/`,
     display: "standalone",

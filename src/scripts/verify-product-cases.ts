@@ -59,8 +59,11 @@ export const PRODUCT_CASES = [
         sections: ["objective"],
         presetId: null,
       });
-      const withResult = workspaceReducer(initial, {
+      const started = workspaceReducer(initial, { type: "enhancement-started", runId: "run-1" });
+      if (!started.activeRunId) throw new Error("workspace did not track the active run");
+      const withResult = workspaceReducer(started, {
         type: "enhancement-succeeded",
+        runId: "run-1",
         document: {
           runId: "run-1",
           originalPrompt: "fix login",
@@ -68,6 +71,7 @@ export const PRODUCT_CASES = [
           analysis: {} as never,
           classification: {} as never,
           resolved: {} as never,
+          generation: { kind: "deterministic" },
           generatedMarkdown: "# Objective\n\nFix login.",
           markdown: "# Objective\n\nFix login.",
           historyId: null,
@@ -81,6 +85,112 @@ export const PRODUCT_CASES = [
         controls: { ...initial.controls, level: "detailed" },
       });
       if (!changed.document?.stale) throw new Error("workspace did not mark stale");
+    },
+  },
+  {
+    name: "stale and late enhancement results are ignored through run IDs",
+    run: () => {
+      const initial = createWorkspaceState({
+        taskType: "auto",
+        level: "standard",
+        sections: ["objective"],
+        presetId: null,
+      });
+      const makeDocument = (runId: string) => ({
+        runId,
+        originalPrompt: "fix login",
+        controls: initial.controls,
+        analysis: {} as never,
+        classification: {} as never,
+        resolved: {} as never,
+        generation: { kind: "ai", provider: "openrouter", model: "stealth/ox-alpha" } as const,
+        generatedMarkdown: `# Objective\n\n${runId}`,
+        markdown: `# Objective\n\n${runId}`,
+        historyId: null,
+        libraryPromptId: null,
+        dirty: false,
+        stale: false,
+      });
+
+      // A result for a run that was never started must not be applied.
+      const unstarted = workspaceReducer(initial, {
+        type: "enhancement-succeeded",
+        runId: "ghost-run",
+        document: makeDocument("ghost-run"),
+      });
+      if (unstarted.document !== null) throw new Error("unstarted run result was applied");
+
+      const started = workspaceReducer(initial, { type: "enhancement-started", runId: "run-a" });
+      const cancelled = workspaceReducer(started, { type: "enhancement-cancelled", runId: "run-a" });
+      if (cancelled.status !== "idle" || cancelled.activeRunId !== null)
+        throw new Error("cancel did not reset running");
+      const lateSuccess = workspaceReducer(cancelled, {
+        type: "enhancement-succeeded",
+        runId: "run-a",
+        document: makeDocument("run-a"),
+      });
+      if (lateSuccess.document !== null) throw new Error("late result after cancel was applied");
+
+      // A second start while running is ignored (double-submit protection).
+      const doubleStarted = workspaceReducer(started, { type: "enhancement-started", runId: "run-b" });
+      if (doubleStarted.activeRunId !== "run-a") throw new Error("second start replaced the active run");
+      const wrongRun = workspaceReducer(doubleStarted, {
+        type: "enhancement-failed",
+        runId: "run-b",
+        error: { message: "should not apply", retryable: true, fallbackEligible: true },
+      });
+      if (wrongRun.error !== null || wrongRun.status !== "running") throw new Error("foreign run failure applied");
+    },
+  },
+  {
+    name: "failed enhancements keep the prior result and expose structured errors",
+    run: () => {
+      const initial = createWorkspaceState({
+        taskType: "auto",
+        level: "standard",
+        sections: ["objective"],
+        presetId: null,
+      });
+      const started = workspaceReducer(initial, { type: "enhancement-started", runId: "run-1" });
+      const succeeded = workspaceReducer(started, {
+        type: "enhancement-succeeded",
+        runId: "run-1",
+        document: {
+          runId: "run-1",
+          originalPrompt: "fix login",
+          controls: initial.controls,
+          analysis: {} as never,
+          classification: {} as never,
+          resolved: {} as never,
+          generation: { kind: "ai", provider: "openrouter", model: "stealth/ox-alpha" } as const,
+          generatedMarkdown: "# Objective\n\nFix login.",
+          markdown: "# Objective\n\nFix login.",
+          historyId: null,
+          libraryPromptId: null,
+          dirty: false,
+          stale: false,
+        },
+      });
+      const failed = workspaceReducer(succeeded, { type: "enhancement-started", runId: "run-2" });
+      const errored = workspaceReducer(failed, {
+        type: "enhancement-failed",
+        runId: "run-2",
+        error: { message: "AI enhancement is unavailable right now.", retryable: false, fallbackEligible: true },
+      });
+      if (errored.document === null || errored.document.runId !== "run-1") {
+        throw new Error("failure discarded the prior result");
+      }
+      if (errored.error?.message !== "AI enhancement is unavailable right now." || !errored.error.fallbackEligible) {
+        throw new Error("structured error drifted");
+      }
+      if (succeeded.document?.generation.kind !== "ai") throw new Error("generation provenance drifted");
+
+      const restored = workspaceReducer(errored, {
+        type: "document-restored",
+        document: { ...errored.document, runId: "restored", markdown: "# Restored" },
+      });
+      if (restored.document?.markdown !== "# Restored") throw new Error("document restore failed");
+      if (restored.status !== "idle") throw new Error("restore left the workspace busy");
     },
   },
   {
@@ -154,6 +264,68 @@ export const PRODUCT_CASES = [
         data: duplicate,
       });
       if (!("error" in invalid)) throw new Error("duplicate folder IDs were accepted");
+    },
+  },
+  {
+    name: "generation provenance is optional in backups and validated when present",
+    run: () => {
+      const settings = defaultPreferenceSnapshot();
+      const baseRecord = {
+        id: "h1",
+        createdAt: 1,
+        originalPrompt: "fix login",
+        enhancedPrompt: "# Objective",
+        requestedTaskType: "auto",
+        taskType: "bug-fix",
+        category: "development",
+        level: "standard",
+        sectionIds: ["objective"],
+        presetId: null,
+      };
+      const withAi = parseBackup({
+        format: "prompt-enhancer-backup",
+        version: 2,
+        exportedAt: "now",
+        settings,
+        data: {
+          history: [{ ...baseRecord, generation: { kind: "ai", provider: "openrouter", model: "stealth/ox-alpha" } }],
+          prompts: [
+            {
+              ...baseRecord,
+              id: "p1",
+              sourceHistoryId: "h1",
+              updatedAt: 1,
+              title: "Login",
+              favorite: false,
+              folderId: null,
+              tags: [],
+              generation: { kind: "deterministic" },
+            },
+          ],
+          folders: [],
+        },
+      });
+      if (!("backup" in withAi)) throw new Error("provenanced records were rejected");
+      const legacy = parseBackup({
+        format: "prompt-enhancer-backup",
+        version: 2,
+        exportedAt: "now",
+        settings,
+        data: { history: [baseRecord], prompts: [], folders: [] },
+      });
+      if (!("backup" in legacy)) throw new Error("records without provenance were rejected");
+      const forged = parseBackup({
+        format: "prompt-enhancer-backup",
+        version: 2,
+        exportedAt: "now",
+        settings,
+        data: {
+          history: [{ ...baseRecord, generation: { kind: "ai", provider: "evil", model: "stealth/ox-alpha" } }],
+          prompts: [],
+          folders: [],
+        },
+      });
+      if (!("error" in forged)) throw new Error("forged provenance was accepted");
     },
   },
 ] as const;

@@ -16,9 +16,13 @@ await mkdir(stage, { recursive: true });
 const sourceRoot = path.join(root, "src");
 await cp(sourceRoot, path.join(stage, "src"), {
   recursive: true,
-  filter: (source) => !source.includes(`${path.sep}app${path.sep}(template)`),
+  filter: (source) =>
+    !source.includes(`${path.sep}app${path.sep}(template)`) && !/[/\\]app[/\\]api([/\\]|$)/.test(source),
 });
 await cp(path.join(root, "public"), path.join(stage, "public"), { recursive: true });
+// The standalone Vercel Function source is staged so type checks can resolve
+// its imports; Next ignores the root api/ directory during static export.
+await cp(path.join(root, "api"), path.join(stage, "api"), { recursive: true });
 try {
   await access(path.join(stage, "src/app/(template)"));
   throw new Error("Static staging source contains the frozen template.");

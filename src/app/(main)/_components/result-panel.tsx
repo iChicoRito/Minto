@@ -1,11 +1,12 @@
 "use client";
 
-import { Copy, Download, Edit3, Save } from "lucide-react";
+import { Copy, Download, Edit3, RefreshCw, Save, Wand2 } from "lucide-react";
 
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { MarkdownPreview } from "@/components/markdown/markdown-preview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import type { WorkspaceState } from "./workspace-state";
@@ -26,6 +27,11 @@ const TASK_LABELS: Record<string, string> = {
   general: "General",
 };
 
+function sourceLabel(state: WorkspaceState): string | null {
+  if (!state.document) return null;
+  return state.document.generation.kind === "ai" ? "AI · Ox Alpha" : "Local rules fallback";
+}
+
 export function ResultPanel({
   state,
   onViewChange,
@@ -34,6 +40,10 @@ export function ResultPanel({
   onExport,
   onSave,
   saveDisabled = false,
+  saving = false,
+  onRetry,
+  onUseLocalRules,
+  fallbackPending = false,
 }: {
   state: WorkspaceState;
   onViewChange: (view: WorkspaceState["view"]) => void;
@@ -42,16 +52,32 @@ export function ResultPanel({
   onExport: () => void;
   onSave?: () => void;
   saveDisabled?: boolean;
+  saving?: boolean;
+  onRetry?: () => void;
+  onUseLocalRules?: () => void;
+  fallbackPending?: boolean;
 }) {
   const document = state.document;
+  const source = sourceLabel(state);
   if (!document) {
     return (
       <Card className="h-full min-h-96">
         <CardHeader>
           <CardTitle>Result</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-1 items-center justify-center text-center text-muted-foreground">
-          Your enhanced prompt will appear here.
+        <CardContent className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted-foreground">
+          <p>Your enhanced prompt will appear here.</p>
+          {state.error?.fallbackEligible && (
+            <>
+              <p className="text-destructive" role="alert">
+                {state.error.message}
+              </p>
+              <Button type="button" variant="outline" size="sm" onClick={onUseLocalRules} disabled={fallbackPending}>
+                {fallbackPending ? <Spinner /> : <Wand2 />}{" "}
+                {fallbackPending ? "Enhancing..." : "Use local rules instead"}
+              </Button>
+            </>
+          )}
         </CardContent>
       </Card>
     );
@@ -61,7 +87,12 @@ export function ResultPanel({
     <Card className="min-h-96">
       <CardHeader className="gap-3 border-b">
         <div className="flex items-center justify-between gap-3">
-          <CardTitle>Enhanced Prompt</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle>Enhanced Prompt</CardTitle>
+            {source && (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground text-xs">{source}</span>
+            )}
+          </div>
           <div className="flex flex-wrap justify-end gap-1">
             <Button type="button" variant="outline" size="sm" onClick={onCopy}>
               <Copy /> Copy
@@ -70,7 +101,7 @@ export function ResultPanel({
               <Edit3 /> Edit
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={onSave} disabled={!onSave || saveDisabled}>
-              <Save /> Save
+              {saving ? <Spinner /> : <Save />} {saving ? "Saving..." : "Save"}
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={onExport}>
               <Download /> Export
@@ -81,6 +112,27 @@ export function ResultPanel({
           <p className="text-muted-foreground text-sm" role="status">
             {state.actionMessage}
           </p>
+        )}
+        {state.status === "running" && (
+          <p className="flex items-center gap-2 text-muted-foreground text-sm" role="status">
+            <Spinner /> Enhancing your prompt...
+          </p>
+        )}
+        {state.error?.fallbackEligible && (
+          <div className="flex flex-wrap items-center gap-2" role="alert">
+            <p className="text-destructive text-sm">{state.error.message}</p>
+            {onRetry && (
+              <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+                <RefreshCw /> Retry
+              </Button>
+            )}
+            {onUseLocalRules && (
+              <Button type="button" variant="outline" size="sm" onClick={onUseLocalRules} disabled={fallbackPending}>
+                {fallbackPending ? <Spinner /> : <Wand2 />}{" "}
+                {fallbackPending ? "Enhancing..." : "Use local rules instead"}
+              </Button>
+            )}
+          </div>
         )}
         {document.classification.topMatches.length > 1 && (
           <p className="text-muted-foreground text-sm" role="status">

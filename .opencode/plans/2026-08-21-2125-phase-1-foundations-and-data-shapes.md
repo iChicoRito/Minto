@@ -1,8 +1,8 @@
 ---
 title: "Phase 1 — Foundations and the Shape of the Data"
-status: in-progress
+status: complete
 created_at: 2026-08-21T21:25:00+02:00
-updated_at: 2026-08-21T21:40:00+02:00
+updated_at: 2026-08-22T15:42:00+08:00
 ---
 
 # Plan: Phase 1 — Foundations and the Shape of the Data
@@ -253,4 +253,17 @@ Everything is additive plus one file deletion:
 - [x] Task 6 — CLAUDE.md refresh *(docs builder, after 5)* — two-app split documented, hard freeze rule, engine purity rule, biome gotcha; stale `/dashboard` claims gone; +17 net lines
 - [x] Task 7 — Analysis-tracker bookkeeping + revision log *(docs builder, after 5)* — R-01 🔵 / R-02 ✅ / R-03 ✅ (08 counts 25⭕+2✅+1🔵=28); T-01 🔵 T-02..T-07 ✅ (09 counts 50⭕+5✅+2🔵=57); `13 - REVISION LOG` created; doorways updated in `00 - START HERE`; 11-vs-12 field correction recorded
 - [x] Reviewer pass over full diff *(Kratos/reviewer)* — **APPROVE**, zero blockers/majors. Gates 1–3 confirmed by direct inspection (template freeze, plan fidelity incl. verbatim types, no regressions; tracker math verified). Findings: 1 minor = stale "12 fields" prose in this plan file → **fixed** (success criteria + data-shape checklist now say 11/8); notes: lockfile pruning of 8 extraneous transitives (benign), `aria-current="page"` polish idea deferred to Phase 4, sidebar cookie write exists client-side (remember for Phase 7 static-export audit).
-- [ ] Final acceptance *(Kratos/verifier)*
+- [x] Final acceptance *(Kratos/verifier)* — **PASS**: scoped Biome checked 11 files with no fixes; `npm run build`
+  passed with 43/43 pages, six enhancer routes static, one `/` route, and template routes resolved;
+  `npm run build:static` passed with required enhancer artifacts and no `out/template`; `npm run verify:engine`
+  passed 166 checks; `npm run verify:product` passed 9/9; engine/import scans and both diff checks were clean;
+  template status/worktree/cached/Phase-1-range diffs were empty; existing `:3017` smoke passed all six enhancer
+  routes and `/template/dashboard/default`. Fresh `:3141/:3142` smoke was blocked by pre-existing Next dev lock
+  PID 23060 on :3000; no unrelated process was terminated. Residual risk: repeat fresh dev smoke after the orphan
+  server is removed by its owner.
+
+## Final acceptance evidence
+
+| When | Evidence |
+|---|---|
+| 2026-08-22 15:42 +08:00 | Kratos/verifier performed read-only acceptance. `npm run build` passed (43/43 pages); `npm run build:static` passed; `npm run verify:engine` passed 166/166; `npm run verify:product` passed 9/9; scoped Biome passed on 11 files; package/dependency/type-vocabulary/import-purity checks passed; frozen `src/app/(template)` and shared template-driver checks were unchanged; final `git diff --check` and `git diff --cached --check` passed. Existing `:3017` route smoke passed `/`, `/presets`, `/library`, `/history`, `/settings`, `/about`, and `/template/dashboard/default`. Fresh dev smoke was not rerun because unrelated PID 23060 held the Next lock; this is environmental and not plan-introduced. Plan status changed from `in-progress` to `complete`. |

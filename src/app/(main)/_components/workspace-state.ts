@@ -1,5 +1,6 @@
+import type { EnhancementResultV1, GenerationDescriptor } from "../../../lib/ai-enhancement/contracts";
 import type { PromptPresetId } from "../../../lib/prompt-presets";
-import type { ClassificationResult, EnhancePromptResult, ResolvedEnhancement } from "../../../prompt-engine";
+import type { ClassificationResult, ResolvedEnhancement } from "../../../prompt-engine";
 import type { SectionId } from "../../../prompt-engine/templates/template-types";
 import type { EnhancementLevel, PromptAnalysis, PromptTaskType } from "../../../prompt-engine/types";
 
@@ -16,7 +17,8 @@ export type WorkspaceDocument = {
   controls: WorkspaceControls;
   analysis: PromptAnalysis;
   classification: ClassificationResult;
-  resolved: ResolvedEnhancement;
+  resolved: ResolvedEnhancement & { presetId: PromptPresetId | null };
+  generation: GenerationDescriptor;
   generatedMarkdown: string;
   markdown: string;
   historyId: string | null;
@@ -25,22 +27,32 @@ export type WorkspaceDocument = {
   stale: boolean;
 };
 
+export type WorkspaceError = {
+  message: string;
+  retryable: boolean;
+  fallbackEligible: boolean;
+};
+
 export type WorkspaceState = {
   prompt: string;
   controls: WorkspaceControls;
   document: WorkspaceDocument | null;
   view: "result" | "preview" | "edit";
   status: "idle" | "running" | "error";
-  error: string | null;
+  activeRunId: string | null;
+  error: WorkspaceError | null;
   actionMessage: string | null;
 };
 
 export type WorkspaceAction =
   | { type: "prompt-changed"; prompt: string }
   | { type: "controls-changed"; controls: WorkspaceControls }
-  | { type: "enhancement-started" }
-  | { type: "enhancement-succeeded"; document: WorkspaceDocument }
-  | { type: "enhancement-failed"; message: string }
+  | { type: "enhancement-started"; runId: string }
+  | { type: "enhancement-succeeded"; runId: string; document: WorkspaceDocument }
+  | { type: "enhancement-failed"; runId: string; error: WorkspaceError }
+  | { type: "enhancement-cancelled"; runId: string }
+  | { type: "document-restored"; document: WorkspaceDocument }
+  | { type: "input-error"; message: string; fallbackEligible?: boolean }
   | { type: "history-saved"; runId: string; historyId: string }
   | { type: "library-saved"; runId: string; libraryPromptId: string }
   | { type: "markdown-changed"; markdown: string }
@@ -55,9 +67,14 @@ export function createWorkspaceState(controls: WorkspaceControls): WorkspaceStat
     document: null,
     view: "result",
     status: "idle",
+    activeRunId: null,
     error: null,
     actionMessage: null,
   };
+}
+
+function isRunActive(state: WorkspaceState, runId: string): boolean {
+  return state.activeRunId !== null && state.activeRunId === runId;
 }
 
 export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
@@ -72,26 +89,45 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         error: null,
       };
     case "enhancement-started":
-      return { ...state, status: "running", error: null, actionMessage: null };
+      if (state.status === "running") return state;
+      return { ...state, status: "running", activeRunId: action.runId, error: null, actionMessage: null };
     case "enhancement-succeeded":
-      return { ...state, document: action.document, status: "idle", error: null, view: "preview", actionMessage: null };
+      if (!isRunActive(state, action.runId)) return state;
+      return {
+        ...state,
+        document: action.document,
+        status: "idle",
+        activeRunId: null,
+        error: null,
+        view: "preview",
+        actionMessage: null,
+      };
     case "enhancement-failed":
-      return { ...state, status: "error", error: action.message };
+      if (!isRunActive(state, action.runId)) return state;
+      // The prior result stays visible so a failed attempt never discards work.
+      return { ...state, status: "error", activeRunId: null, error: action.error };
+    case "enhancement-cancelled":
+      if (!isRunActive(state, action.runId)) return state;
+      return { ...state, status: "idle", activeRunId: null, error: null };
+    case "document-restored":
+      return { ...state, document: action.document, status: "idle", view: "preview", error: null };
+    case "input-error":
+      return {
+        ...state,
+        status: state.status === "running" ? state.status : "error",
+        error: {
+          message: action.message,
+          retryable: false,
+          fallbackEligible: action.fallbackEligible ?? false,
+        },
+      };
     case "history-saved":
       return state.document?.runId === action.runId
-        ? {
-            ...state,
-            document: { ...state.document, historyId: action.historyId },
-            actionMessage: "Added to local history.",
-          }
+        ? { ...state, document: { ...state.document, historyId: action.historyId } }
         : state;
     case "library-saved":
       return state.document?.runId === action.runId
-        ? {
-            ...state,
-            document: { ...state.document, libraryPromptId: action.libraryPromptId, dirty: false },
-            actionMessage: "Saved to your local library.",
-          }
+        ? { ...state, document: { ...state.document, libraryPromptId: action.libraryPromptId, dirty: false } }
         : state;
     case "markdown-changed":
       return state.document
@@ -115,7 +151,7 @@ export function documentFromEnhancement(
   runId: string,
   originalPrompt: string,
   controls: WorkspaceControls,
-  result: EnhancePromptResult,
+  result: EnhancementResultV1,
 ): WorkspaceDocument {
   return {
     runId,
@@ -123,7 +159,14 @@ export function documentFromEnhancement(
     controls,
     analysis: result.analysis,
     classification: result.classification,
-    resolved: result.resolved,
+    resolved: {
+      presetId: result.resolved.presetId ?? controls.presetId,
+      taskType: result.resolved.taskType,
+      category: result.resolved.category,
+      level: result.resolved.level,
+      sections: result.resolved.sections,
+    },
+    generation: result.generation,
     generatedMarkdown: result.markdown,
     markdown: result.markdown,
     historyId: null,

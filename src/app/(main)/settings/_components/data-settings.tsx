@@ -1,67 +1,99 @@
-"use client";
+﻿"use client";
 
 import { useRef, useState } from "react";
 
 import { Download, Eraser, FileInput, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 import { exportLocalMemory, readBackupFile, restoreLocalMemory } from "@/lib/browser-memory/backup.client";
 import type { BackupPreview, ParsedBackup } from "@/lib/browser-memory/backup-schema";
 import type { MemoryRepository } from "@/lib/browser-memory/repository.client";
 import { HISTORY_LIMIT_OPTIONS, type HistoryLimit } from "@/lib/preferences/prompt-preferences";
 
 export function DataSettings({
-  historyEnabled,
   historyMaxEntries,
   memoryStatus,
   repository,
-  onHistoryEnabledChange,
   onHistoryMaxEntriesChange,
   onClearAll,
 }: {
-  historyEnabled: boolean;
   historyMaxEntries: HistoryLimit;
   memoryStatus: "loading" | "ready" | "unavailable";
   repository: MemoryRepository;
-  onHistoryEnabledChange: (enabled: boolean) => void;
   onHistoryMaxEntriesChange: (limit: HistoryLimit) => void;
   onClearAll: () => Promise<void>;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<{ backup: ParsedBackup; preview: BackupPreview } | null>(null);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const ready = memoryStatus === "ready";
 
-  const clearHistory = async () => {
-    if (!ready || !window.confirm("Clear local history? Saved library prompts will remain.")) return;
+  const runAction = async (
+    key: string,
+    action: () => Promise<void>,
+    successMessage: string,
+    failureMessage: string,
+  ) => {
+    setPendingAction(key);
     try {
-      await repository.clearHistory();
-      setMessage("Local history cleared.");
+      await action();
+      toast.success(successMessage);
+      setMessage(null);
     } catch {
-      setMessage("History could not be cleared.");
+      toast.error(failureMessage);
+      setMessage(failureMessage);
+    } finally {
+      setPendingAction(null);
     }
   };
 
-  const clearLibrary = async () => {
-    if (!ready || !window.confirm("Clear the local library and folders? History will remain.")) return;
-    try {
-      await repository.clearLibrary();
-      setMessage("Local library and folders cleared.");
-    } catch {
-      setMessage("The library could not be cleared.");
-    }
-  };
+  const clearHistory = () =>
+    runAction(
+      "clear-history",
+      async () => {
+        if (!ready || !window.confirm("Clear local history? Saved library prompts will remain.")) {
+          throw new Error("cancelled");
+        }
+        await repository.clearHistory();
+      },
+      "Local history cleared.",
+      "History could not be cleared.",
+    );
+
+  const clearLibrary = () =>
+    runAction(
+      "clear-library",
+      async () => {
+        if (!ready || !window.confirm("Clear the local library and folders? History will remain.")) {
+          throw new Error("cancelled");
+        }
+        await repository.clearLibrary();
+      },
+      "Local library and folders cleared.",
+      "The library could not be cleared.",
+    );
+
+  const exportBackup = () =>
+    runAction("export", () => exportLocalMemory(repository), "Backup exported.", "The backup could not be exported.");
 
   const importBackup = async (file: File | undefined) => {
     if (!file) return;
     try {
       setPending(await readBackupFile(file));
       setMessage(null);
+      toast.success("Backup read. Review it below before restoring.");
     } catch (error) {
       setPending(null);
-      setMessage(error instanceof Error ? error.message : "This backup could not be read.");
+      const failureMessage = error instanceof Error ? error.message : "This backup could not be read.";
+      setMessage(failureMessage);
+      toast.error(failureMessage);
     }
   };
 
@@ -72,13 +104,15 @@ export function DataSettings({
       `Replace local data with this backup? ${preview.historyCount} history entries, ${preview.promptCount} prompts, and ${preview.folderCount} folders will be restored.`,
     );
     if (!confirmed) return;
-    try {
-      await restoreLocalMemory(repository, backup);
-      setMessage("Backup restored. Reloading…");
-      window.location.reload();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "The backup could not be restored.");
-    }
+    await runAction(
+      "restore",
+      async () => {
+        await restoreLocalMemory(repository, backup);
+      },
+      "Backup restored. Reloadingâ€¦",
+      "The backup could not be restored.",
+    );
+    window.location.reload();
   };
 
   return (
@@ -89,41 +123,41 @@ export function DataSettings({
           <CardDescription>Prompts and history stay in this browser. They are not encrypted or synced.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={historyEnabled}
-              onChange={(event) => onHistoryEnabledChange(event.target.checked)}
-            />
-            Save successful enhancements in local history
-          </label>
           <div className="space-y-2">
-            <label htmlFor="history-max-entries" className="font-medium text-sm">
+            <Label htmlFor="history-max-entries" className="font-medium text-sm">
               Maximum history entries
-            </label>
-            <select
-              id="history-max-entries"
-              className="h-9 w-full max-w-xs rounded-lg border border-input bg-background px-2 text-sm"
-              value={historyMaxEntries}
-              onChange={(event) => onHistoryMaxEntriesChange(Number(event.target.value) as HistoryLimit)}
+            </Label>
+            <Select
+              value={String(historyMaxEntries)}
+              onValueChange={(value) => onHistoryMaxEntriesChange(Number(value) as HistoryLimit)}
             >
-              {HISTORY_LIMIT_OPTIONS.map((limit) => (
-                <option key={limit} value={limit}>
-                  {limit}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="history-max-entries" className="w-full max-w-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                {HISTORY_LIMIT_OPTIONS.map((limit) => (
+                  <SelectItem key={limit} value={String(limit)}>
+                    {limit}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               variant="outline"
-              disabled={!ready}
-              onClick={() => void exportLocalMemory(repository)}
+              disabled={!ready || pendingAction !== null}
+              onClick={() => void exportBackup()}
             >
-              <Download /> Export backup
+              {pendingAction === "export" ? <Spinner /> : <Download />} Export backup
             </Button>
-            <Button type="button" variant="outline" disabled={!ready} onClick={() => fileInput.current?.click()}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!ready || pendingAction !== null}
+              onClick={() => fileInput.current?.click()}
+            >
               <FileInput /> Import backup
             </Button>
             <Input
@@ -147,17 +181,32 @@ export function DataSettings({
             </div>
           )}
           <div className="flex flex-wrap gap-2 border-t pt-4">
-            <Button type="button" variant="destructive" disabled={!ready} onClick={() => void clearHistory()}>
-              <Trash2 /> Clear history
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={!ready || pendingAction !== null}
+              onClick={() => void clearHistory()}
+            >
+              {pendingAction === "clear-history" && <Spinner />} <Trash2 /> Clear history
             </Button>
-            <Button type="button" variant="destructive" disabled={!ready} onClick={() => void clearLibrary()}>
-              <Eraser /> Clear library
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={!ready || pendingAction !== null}
+              onClick={() => void clearLibrary()}
+            >
+              {pendingAction === "clear-library" && <Spinner />} Clear library
             </Button>
-            <Button type="button" variant="destructive" disabled={!ready} onClick={() => void onClearAll()}>
-              <Trash2 /> Clear all local data
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={!ready || pendingAction !== null}
+              onClick={() => void onClearAll()}
+            >
+              {pendingAction === "clear-all" && <Spinner />} <Trash2 /> Clear all local data
             </Button>
           </div>
-          {memoryStatus === "loading" && <p className="text-muted-foreground text-sm">Opening local storage…</p>}
+          {memoryStatus === "loading" && <p className="text-muted-foreground text-sm">Opening local storageâ€¦</p>}
           {memoryStatus === "unavailable" && (
             <p className="text-destructive text-sm">
               Local storage is unavailable. Your current workspace still works.

@@ -50,10 +50,12 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
         <div className="rounded-lg border bg-muted/30 p-2 text-muted-foreground text-xs group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:text-center">
-          <span className="font-medium text-foreground group-data-[collapsible=icon]:sr-only">100% Local</span>
-          <span className="block group-data-[collapsible=icon]:sr-only">No account. No AI.</span>
-          <span className="block group-data-[collapsible=icon]:sr-only">Your prompts stay in your browser.</span>
-          <span className="hidden group-data-[collapsible=icon]:inline" title="100% Local">
+          <span className="font-medium text-foreground group-data-[collapsible=icon]:sr-only">
+            Local data + optional AI
+          </span>
+          <span className="block group-data-[collapsible=icon]:sr-only">AI prompts leave your browser.</span>
+          <span className="block group-data-[collapsible=icon]:sr-only">History, library, and settings stay here.</span>
+          <span className="hidden group-data-[collapsible=icon]:inline" title="Local data + optional AI">
             🔒
           </span>
         </div>

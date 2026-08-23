@@ -1,8 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { defaultPreferenceSnapshot, PREFERENCE_SNAPSHOT_KEYS } from "@/lib/preferences/preference-snapshot";
 import { persistPreference } from "@/lib/preferences/preferences-storage";
@@ -88,40 +91,48 @@ export function SettingsScreen() {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              <label className="space-y-2 text-sm">
+              <div className="space-y-2 text-sm">
                 <span className="font-medium">Default prompt type</span>
-                <select
-                  className="h-9 w-full rounded-lg border border-input bg-background px-2"
+                <Select
                   value={preferences.defaultPromptType}
-                  onChange={(event) => {
-                    const value = event.target.value as typeof preferences.defaultPromptType;
-                    preferences.setDefaultPromptType(value);
-                    save("default_prompt_type", value);
+                  onValueChange={(value) => {
+                    const typed = value as typeof preferences.defaultPromptType;
+                    preferences.setDefaultPromptType(typed);
+                    save("default_prompt_type", typed);
                   }}
                 >
-                  {PROMPT_TYPE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="space-y-2 text-sm">
+                  <SelectTrigger aria-label="Default prompt type" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    {PROMPT_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 text-sm">
                 <span className="font-medium">Default enhancement level</span>
-                <select
-                  className="h-9 w-full rounded-lg border border-input bg-background px-2"
+                <Select
                   value={preferences.defaultEnhancementLevel}
-                  onChange={(event) => {
-                    const value = event.target.value as typeof preferences.defaultEnhancementLevel;
-                    preferences.setDefaultEnhancementLevel(value);
-                    save("default_enhancement_level", value);
+                  onValueChange={(value) => {
+                    const typed = value as typeof preferences.defaultEnhancementLevel;
+                    preferences.setDefaultEnhancementLevel(typed);
+                    save("default_enhancement_level", typed);
                   }}
                 >
-                  <option value="light">Light</option>
-                  <option value="standard">Standard</option>
-                  <option value="detailed">Detailed</option>
-                </select>
-              </label>
+                  <SelectTrigger aria-label="Default enhancement level" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    <SelectItem value="light">Light</SelectItem>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="detailed">Detailed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -132,17 +143,22 @@ export function SettingsScreen() {
               <CardDescription>Objective is always included. The other sections are optional.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
-              {PROMPT_SECTION_IDS.map((section) => (
-                <label key={section} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={preferences.defaultPromptSections.includes(section)}
-                    disabled={section === "objective"}
-                    onChange={() => updateSections(section)}
-                  />
-                  {SECTION_LABELS[section]}
-                </label>
-              ))}
+              {PROMPT_SECTION_IDS.map((section) => {
+                const sectionId = `default-section-${section}`;
+                return (
+                  <div key={section} className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      id={sectionId}
+                      checked={preferences.defaultPromptSections.includes(section)}
+                      disabled={section === "objective"}
+                      onCheckedChange={() => updateSections(section)}
+                    />
+                    <Label htmlFor={sectionId} className="font-normal">
+                      {SECTION_LABELS[section]}
+                    </Label>
+                  </div>
+                );
+              })}
               {preferences.defaultPromptSections.length === 0 && (
                 <p className="text-destructive text-sm">Choose at least Objective.</p>
               )}
@@ -155,38 +171,36 @@ export function SettingsScreen() {
               <CardTitle>Appearance</CardTitle>
               <CardDescription>Choose how the interface follows your device.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <label htmlFor="theme-mode" className="font-medium text-sm">
+            <CardContent className="space-y-2">
+              <Label htmlFor="theme-mode" className="font-medium text-sm">
                 Color mode
-              </label>
-              <select
-                id="theme-mode"
-                className="mt-2 h-9 w-full max-w-xs rounded-lg border border-input bg-background px-2 text-sm"
+              </Label>
+              <Select
                 value={preferences.themeMode}
-                onChange={(event) => {
-                  const value = event.target.value as typeof preferences.themeMode;
-                  preferences.setThemeMode(value);
-                  applyThemeMode(value);
-                  void persistPreference("theme_mode", value).catch(() => setMessage("The theme could not be saved."));
+                onValueChange={(value) => {
+                  const typed = value as typeof preferences.themeMode;
+                  preferences.setThemeMode(typed);
+                  applyThemeMode(typed);
+                  void persistPreference("theme_mode", typed).catch(() => setMessage("The theme could not be saved."));
                 }}
               >
-                <option value="system">System</option>
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-              </select>
+                <SelectTrigger id="theme-mode" className="w-full max-w-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  <SelectItem value="system">System</SelectItem>
+                  <SelectItem value="light">Light</SelectItem>
+                  <SelectItem value="dark">Dark</SelectItem>
+                </SelectContent>
+              </Select>
             </CardContent>
           </Card>
         </TabsContent>
         <TabsContent value="data" className="pt-4">
           <DataSettings
-            historyEnabled={preferences.historyEnabled}
             historyMaxEntries={preferences.historyMaxEntries}
             memoryStatus={memoryStatus}
             repository={repository}
-            onHistoryEnabledChange={(enabled) => {
-              preferences.setHistoryEnabled(enabled);
-              save("history_enabled", enabled ? "true" : "false");
-            }}
             onHistoryMaxEntriesChange={(limit: HistoryLimit) => {
               preferences.setHistoryMaxEntries(limit);
               save("history_max_entries", String(limit));

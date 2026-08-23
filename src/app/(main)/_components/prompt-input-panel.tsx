@@ -1,9 +1,14 @@
-"use client";
+﻿"use client";
 
 import type { Dispatch } from "react";
 
+import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { SECTION_TITLES, type SectionId } from "@/prompt-engine/templates/template-types";
 import type { EnhancementLevel, PromptTaskType } from "@/prompt-engine/types";
@@ -51,21 +56,29 @@ export function PromptInputPanel({
   error,
   promptLength,
   stale,
-  disabled,
+  running,
   dispatch,
   onEnhance,
+  onCancel,
 }: {
   prompt: string;
   controls: WorkspaceControls;
   error: string | null;
   promptLength: number;
   stale: boolean;
-  disabled: boolean;
+  running: boolean;
   dispatch: Dispatch<WorkspaceAction>;
   onEnhance: () => void;
+  onCancel: () => void;
 }) {
   const changeControls = (next: Partial<WorkspaceControls>) => {
-    dispatch({ type: "controls-changed", controls: { ...controls, ...next, presetId: null } });
+    // Level and section edits keep preset identity; an explicit task-type
+    // switch is a manual selection and clears it.
+    const clearsPreset = next.taskType !== undefined && next.taskType !== controls.taskType;
+    dispatch({
+      type: "controls-changed",
+      controls: { ...controls, ...next, ...(clearsPreset ? { presetId: null } : {}) },
+    });
   };
 
   return (
@@ -74,7 +87,9 @@ export function PromptInputPanel({
         <h2 id="prompt-input-title" className="font-medium text-lg">
           Your Prompt
         </h2>
-        <p className="text-muted-foreground text-sm">Start with rough wording. The local rules engine structures it.</p>
+        <p className="text-muted-foreground text-sm">
+          Start with rough wording. AI enhances it according to your selected preset, type, and level.
+        </p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="prompt-input">Prompt</Label>
@@ -84,7 +99,7 @@ export function PromptInputPanel({
           placeholder="Describe what you want to accomplish..."
           value={prompt}
           onChange={(event) => dispatch({ type: "prompt-changed", prompt: event.target.value })}
-          disabled={disabled}
+          disabled={running}
         />
         <p className={promptLength > 15_000 ? "text-destructive text-xs" : "text-muted-foreground text-xs"}>
           {promptLength.toLocaleString()} / 15,000 characters
@@ -93,36 +108,42 @@ export function PromptInputPanel({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="prompt-type">Prompt Type</Label>
-          <select
-            id="prompt-type"
-            className="h-9 w-full rounded-lg border border-input bg-background px-2 text-sm"
+          <Select
             value={controls.taskType}
-            onChange={(event) => changeControls({ taskType: event.target.value as WorkspaceControls["taskType"] })}
-            disabled={disabled}
+            onValueChange={(value) => changeControls({ taskType: value as WorkspaceControls["taskType"] })}
+            disabled={running}
           >
-            <option value="auto">Auto Detect</option>
-            {TASK_TYPES.map((type) => (
-              <option key={type.value} value={type.value}>
-                {type.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="prompt-type" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              <SelectItem value="auto">Auto Detect</SelectItem>
+              {TASK_TYPES.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="enhancement-level">Enhancement Level</Label>
-          <select
-            id="enhancement-level"
-            className="h-9 w-full rounded-lg border border-input bg-background px-2 text-sm"
+          <Select
             value={controls.level}
-            onChange={(event) => changeControls({ level: event.target.value as EnhancementLevel })}
-            disabled={disabled}
+            onValueChange={(value) => changeControls({ level: value as EnhancementLevel })}
+            disabled={running}
           >
-            {LEVELS.map((level) => (
-              <option key={level.value} value={level.value}>
-                {level.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="enhancement-level" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              {LEVELS.map((level) => (
+                <SelectItem key={level.value} value={level.value}>
+                  {level.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <fieldset className="space-y-3">
@@ -130,22 +151,28 @@ export function PromptInputPanel({
         <div className="grid gap-2 sm:grid-cols-2">
           {SECTION_OPTIONS.map((section) => {
             const checked = controls.sections.includes(section.value);
-            const objective = section.value === "objective";
+            const sectionId = `section-option-${section.value}`;
             return (
-              <label key={section.value} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
+              <div key={section.value} className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  id={sectionId}
                   checked={checked}
-                  disabled={disabled || objective}
-                  onChange={() => {
+                  disabled={running}
+                  onCheckedChange={() => {
+                    if (checked && controls.sections.length === 1) {
+                      toast.warning("Keep at least one section selected.");
+                      return;
+                    }
                     const sections = checked
                       ? controls.sections.filter((item) => item !== section.value)
                       : [...controls.sections, section.value];
                     changeControls({ sections });
                   }}
                 />
-                {section.label}
-              </label>
+                <Label htmlFor={sectionId} className="font-normal">
+                  {section.label}
+                </Label>
+              </div>
             );
           })}
         </div>
@@ -156,9 +183,19 @@ export function PromptInputPanel({
           {error}
         </p>
       )}
-      <Button type="button" className="w-full" onClick={onEnhance} disabled={disabled}>
-        {disabled ? "Enhancing..." : "Enhance Prompt"}
-      </Button>
+      <div aria-live="polite" className="sr-only">
+        {running ? "Enhancing your prompt." : ""}
+      </div>
+      <div className="flex gap-2">
+        <Button type="button" className="flex-1" onClick={onEnhance} disabled={running}>
+          {running && <Spinner />} {running ? "Enhancing..." : "Enhance Prompt"}
+        </Button>
+        {running && (
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
+      </div>
     </section>
   );
 }

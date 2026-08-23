@@ -16,10 +16,13 @@
     "generate:presets": "ts-node -P tsconfig.scripts.json src/scripts/generate-theme-presets.ts",
     "verify:engine": "ts-node -P tsconfig.scripts.json src/scripts/verify-engine.ts",
     "verify:product": "ts-node -P tsconfig.scripts.json src/scripts/verify-product.ts",
+    "verify:ai": "ts-node -P tsconfig.scripts.json src/scripts/verify-ai.ts",
     "verify:performance": "ts-node -P tsconfig.scripts.json src/scripts/verify-performance.ts"
   },
   "lint-staged": {
-    "*.{js,ts,jsx,tsx}": ["biome check --write --no-errors-on-unmatched"]
+    "*.{js,ts,jsx,tsx}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -28,7 +31,9 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@fullcalendar/react": "^7.0.2",
     "@hookform/resolvers": "^5.7.1",
+    "@tailwindcss/typography": "^0.5.20",
     "@tanstack/react-table": "^8.21.3",
+    "@upstash/redis": "^1.38.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

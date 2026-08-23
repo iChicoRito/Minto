@@ -99,11 +99,13 @@ export function ThemeBootScript() {
           mode === "system" && window.matchMedia
             ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
             : mode;
-        var preset = rawPreset || DEFAULTS.theme_preset;
+        // The product is pinned to the Lime preset and the plain sidebar
+        // variant; stored values from earlier builds are clamped back.
+        var preset = rawPreset === DEFAULTS.theme_preset ? rawPreset : DEFAULTS.theme_preset;
         var font = rawFont || DEFAULTS.font;
         var contentLayout = rawContentLayout || DEFAULTS.content_layout;
         var navbarStyle = rawNavbarStyle || DEFAULTS.navbar_style;
-         var sidebarVariant = rawSidebarVariant || DEFAULTS.sidebar_variant;
+         var sidebarVariant = rawSidebarVariant === "sidebar" ? rawSidebarVariant : DEFAULTS.sidebar_variant;
          var sidebarCollapsible = rawSidebarCollapsible || DEFAULTS.sidebar_collapsible;
          var defaultLevel = rawDefaultLevel === "light" || rawDefaultLevel === "standard" || rawDefaultLevel === "detailed"
            ? rawDefaultLevel

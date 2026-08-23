@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 
@@ -10,6 +10,7 @@ import { Copy, Edit3, FolderPlus, Heart, MoreHorizontal, Trash2 } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { filterLibraryPrompts, normalizeFolderName, normalizeTags } from "@/lib/browser-memory/record-utils";
 import type { SavedPrompt } from "@/lib/browser-memory/types";
 import type { PromptCategory } from "@/prompt-engine/types";
@@ -107,24 +108,23 @@ function LibraryContent() {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-        <select
-          aria-label="Filter by folder"
-          className="h-9 rounded-lg border border-input bg-background px-2 text-sm"
+        <Select
           value={folderId === undefined ? "all" : (folderId ?? "unfiled")}
-          onChange={(event) =>
-            setFolderId(
-              event.target.value === "all" ? undefined : event.target.value === "unfiled" ? null : event.target.value,
-            )
-          }
+          onValueChange={(value) => setFolderId(value === "all" ? undefined : value === "unfiled" ? null : value)}
         >
-          <option value="all">All folders</option>
-          <option value="unfiled">Unfiled</option>
-          {folders.map((folder) => (
-            <option key={folder.id} value={folder.id}>
-              {folder.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger aria-label="Filter by folder" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent position="popper">
+            <SelectItem value="all">All folders</SelectItem>
+            <SelectItem value="unfiled">Unfiled</SelectItem>
+            {folders.map((folder) => (
+              <SelectItem key={folder.id} value={folder.id}>
+                {folder.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Input placeholder="Filter by tag" value={tag} onChange={(event) => setTag(event.target.value)} />
         <Button type="button" variant="outline" onClick={createFolder}>
           <FolderPlus /> New folder
@@ -179,7 +179,7 @@ function LibraryContent() {
                   <div className="min-w-0">
                     <CardTitle className="truncate text-sm">{prompt.title}</CardTitle>
                     <p className="text-muted-foreground text-xs">
-                      {prompt.category} · {prompt.level}
+                      {prompt.category} Â· {prompt.level}
                     </p>
                   </div>
                   <Button
@@ -228,21 +228,24 @@ function LibraryContent() {
                   <Button type="button" variant="outline" size="sm" onClick={() => editTags(prompt)}>
                     <MoreHorizontal /> Tags
                   </Button>
-                  <select
-                    aria-label={`Folder for ${prompt.title}`}
-                    className="h-7 rounded-md border border-input bg-background px-2 text-xs"
-                    value={prompt.folderId ?? ""}
-                    onChange={(event) =>
-                      void update(prompt.id, { folderId: event.target.value || null, updatedAt: Date.now() })
+                  <Select
+                    value={prompt.folderId ?? "unfiled"}
+                    onValueChange={(value) =>
+                      void update(prompt.id, { folderId: value === "unfiled" ? null : value, updatedAt: Date.now() })
                     }
                   >
-                    <option value="">Unfiled</option>
-                    {folders.map((folder) => (
-                      <option key={folder.id} value={folder.id}>
-                        {folder.name}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger aria-label={`Folder for ${prompt.title}`} size="sm" className="w-32 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent position="popper">
+                      <SelectItem value="unfiled">Unfiled</SelectItem>
+                      {folders.map((folder) => (
+                        <SelectItem key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Button
                     type="button"
                     variant="ghost"

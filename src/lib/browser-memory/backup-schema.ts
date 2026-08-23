@@ -24,6 +24,12 @@ const CATEGORIES = ["development", "writing", "research", "design", "general"] a
 const LEVELS = ["light", "standard", "detailed"] as const;
 const SECTION_ID = z.string().trim().min(1).max(80);
 
+const generationSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("ai"), provider: z.literal("openrouter"), model: z.literal("stealth/ox-alpha") }).strict(),
+  z.object({ kind: z.literal("deterministic") }).strict(),
+]);
+const optionalGeneration = generationSchema.optional();
+
 const historySchema = z
   .object({
     id: ID,
@@ -36,6 +42,7 @@ const historySchema = z
     level: z.enum(LEVELS),
     sectionIds: z.array(SECTION_ID).max(80),
     presetId: z.string().max(128).nullable(),
+    generation: optionalGeneration,
   })
   .strict();
 
@@ -57,6 +64,7 @@ const promptSchema = z
     favorite: z.boolean(),
     folderId: ID.nullable(),
     tags: z.array(z.string().trim().min(1).max(40)).max(20),
+    generation: optionalGeneration,
   })
   .strict();
 
