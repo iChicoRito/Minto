@@ -19,6 +19,7 @@ export type ModelCompletionInput = {
   userContent: string;
   reasoningEffort: "low" | "high" | "max";
   completionBudget: 2048 | 8192 | 32768;
+  responseFormat?: "json_object" | "text";
 };
 
 export type ModelCompletionMetadata = {
@@ -144,7 +145,8 @@ async function complete(
 
     if (statusFailure !== undefined) throw mapHttpFailure(response, rawBody);
 
-    const completion = parseCompletion(rawBody);
+    const expectJson = input.responseFormat !== "text";
+    const completion = parseCompletion(rawBody, expectJson);
     options.onMetadata?.(completion.metadata);
     return completion.rawContent;
   } catch (error) {
@@ -178,11 +180,14 @@ function buildRequestBody(input: ModelCompletionInput): Record<string, unknown> 
     ],
     service_tier: "default",
     reasoning: { effort: input.reasoningEffort, exclude: true },
-    response_format: { type: "json_object" },
     max_tokens: input.completionBudget,
     stream: false,
     provider: PROVIDER_PREFERENCES,
   };
+
+  if (input.responseFormat !== "text") {
+    body.response_format = { type: "json_object" };
+  }
 
   return body;
 }
@@ -255,7 +260,7 @@ async function readResponseBody(response: Response, controller: AbortController)
   }
 }
 
-function parseCompletion(rawBody: string): NormalizedCompletion {
+function parseCompletion(rawBody: string, expectJson: boolean): NormalizedCompletion {
   let value: unknown;
   try {
     value = JSON.parse(rawBody) as unknown;
@@ -277,7 +282,7 @@ function parseCompletion(rawBody: string): NormalizedCompletion {
     !isRecord(choice.message) ||
     typeof choice.message.content !== "string" ||
     choice.message.content.trim() === "" ||
-    !isJsonObjectText(choice.message.content)
+    (expectJson && !isJsonObjectText(choice.message.content))
   ) {
     throw new AiProviderError("invalid_provider_response");
   }

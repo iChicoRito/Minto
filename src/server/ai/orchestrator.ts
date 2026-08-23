@@ -79,6 +79,7 @@ export function createOrchestrator(dependencies: OrchestratorDependencies): Enha
               userContent: request.prompt,
               reasoningEffort: "low",
               completionBudget: 2048,
+              responseFormat: "text",
             },
             { signal: context.signal, onMetadata: context.onCompletionMetadata },
           );
