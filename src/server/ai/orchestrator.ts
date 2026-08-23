@@ -2,6 +2,7 @@ import {
   ENHANCEMENT_API_VERSION,
   type EnhancementRequestV1,
   type EnhancementSuccessV1,
+  MAX_NORMALIZED_MARKDOWN_CHARACTERS,
   OPENROUTER_MODEL,
 } from "../../lib/ai-enhancement/contracts";
 import { enhancePrompt } from "../../prompt-engine";
@@ -60,6 +61,103 @@ export function createOrchestrator(dependencies: OrchestratorDependencies): Enha
   return {
     async enhance(request: EnhancementRequestV1, context: OrchestrationContext): Promise<EnhancementSuccessV1> {
       const policy = resolvePolicy(request);
+      const isGrammarOnly =
+        request.sections.length === 0 || (request.sections.length === 1 && request.sections[0] === "objective");
+      if (isGrammarOnly) {
+        // No sections selected — grammar-only mode: plain corrected text only,
+        // no markdown, no preset. Never use local fallback — show feedback on failure.
+        const engineFacts = resolveEngineFacts(request, policy);
+        let admission: Awaited<ReturnType<Admission["acquire"]>> | null = null;
+        try {
+          admission = await dependencies.admission.acquire();
+          if (admission.status === "busy") throw new AdmissionBusyError(admission.retryAfterSeconds);
+          if (admission.status !== "admitted" || admission.leaseId === undefined) throw new AdmissionUnavailableError();
+          const rawContent = await dependencies.model.complete(
+            {
+              systemInstruction:
+                'You are a grammar correction assistant. Correct the grammar, spelling, punctuation, and enhance the structure of the source text. Preserve the original meaning and intent. Do not add extra sections, headings, bullet points, or markdown formatting. Do not use any preset. Do not return JSON, do not wrap in {"answer": ...} or any object, do not add quotes. Return only the corrected plain text.',
+              userContent: request.prompt,
+              reasoningEffort: "low",
+              completionBudget: 2048,
+            },
+            { signal: context.signal, onMetadata: context.onCompletionMetadata },
+          );
+          let plain = rawContent.trim();
+          // Handle case where model still returns JSON (e.g., {"answer":"..."} or {"sections":...}) — extract plain text
+          if (plain.startsWith("{") || plain.startsWith("[")) {
+            try {
+              const parsed = JSON.parse(plain) as unknown;
+              if (parsed !== null && typeof parsed === "object") {
+                const obj = parsed as Record<string, unknown>;
+                if (typeof obj.answer === "string") plain = obj.answer as string;
+                else if (typeof obj.markdown === "string") plain = obj.markdown as string;
+                else if (typeof obj.text === "string") plain = obj.text as string;
+                else if (typeof obj.content === "string") plain = obj.content as string;
+                else if (typeof obj.corrected === "string") plain = obj.corrected as string;
+                else if (typeof obj.result === "string") plain = obj.result as string;
+                else if (Array.isArray(obj.sections) && (obj.sections as unknown[]).length > 0) {
+                  const sections = obj.sections as Array<{ content?: unknown }>;
+                  const first = sections[0];
+                  if (Array.isArray(first.content) && first.content.length > 0) {
+                    plain = (first.content as string[]).join(" ");
+                  } else if (typeof first.content === "string") {
+                    plain = first.content as string;
+                  }
+                } else {
+                  // Fallback: if object has a single string value, use it (e.g., {"answer": "..."})
+                  const stringValues = Object.values(obj).filter((v): v is string => typeof v === "string");
+                  if (stringValues.length === 1) plain = stringValues[0];
+                  else if (stringValues.length > 0) {
+                    // Prefer the longest string (likely the corrected text)
+                    plain = stringValues.reduce((a, b) => (a.length >= b.length ? a : b));
+                  }
+                }
+              } else if (typeof parsed === "string") {
+                plain = parsed as string;
+              }
+            } catch {
+              // keep raw if not JSON
+            }
+          }
+          // Strip surrounding quotes if model wrapped plain text in quotes
+          if ((plain.startsWith('"') && plain.endsWith('"')) || (plain.startsWith("'") && plain.endsWith("'"))) {
+            plain = plain.slice(1, -1);
+          }
+          plain = plain.trim();
+          if (plain.length === 0) throw new AiOrchestrationError("invalid_provider_response");
+          if (plain.length > MAX_NORMALIZED_MARKDOWN_CHARACTERS) throw new AiOrchestrationError("output_too_large");
+          return {
+            version: ENHANCEMENT_API_VERSION,
+            ok: true,
+            requestId: normalizeRequestId(requestId()),
+            result: {
+              analysis: engineFacts.analysis,
+              classification: engineFacts.classification,
+              resolved: {
+                presetId: null,
+                taskType: policy.taskType,
+                category: policy.category,
+                level: policy.level,
+                sections: [],
+                reasoningEffort: "low",
+              },
+              markdown: plain,
+              generation: { kind: "ai", provider: "openrouter", model: OPENROUTER_MODEL },
+            },
+          };
+        } catch (error) {
+          if (isAiCancellationError(error)) throw error;
+          throw normalizeProviderFailure(error);
+        } finally {
+          if (admission?.leaseId) {
+            try {
+              await dependencies.admission.release(admission.leaseId);
+            } catch {
+              // ignore
+            }
+          }
+        }
+      }
       const admission = await dependencies.admission.acquire();
 
       if (admission.status === "busy") throw new AdmissionBusyError(admission.retryAfterSeconds);

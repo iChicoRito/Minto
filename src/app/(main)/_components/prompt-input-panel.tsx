@@ -1,8 +1,8 @@
 ﻿"use client";
 
-import type { Dispatch } from "react";
+import { type Dispatch, useEffect, useState } from "react";
 
-import { toast } from "sonner";
+import { Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -50,6 +50,21 @@ const SECTION_OPTIONS: readonly { value: SectionId; label: string }[] = PROMPT_S
   label: SECTION_TITLES[value],
 }));
 
+const GENZ_ENHANCING_MESSAGES: readonly string[] = [
+  "Crafting your enhanced prompt.",
+  "Cooking... this finna be fire",
+  "Giving your prompt rizz",
+  "Making it slay, no cap",
+  "Main character energy loading...",
+  "Brewing your prompt tea",
+  "Slay mode: activated",
+  "Lowkey perfecting your words...",
+  "Highkey making it elite",
+  "Sheesh, your prompt bout to pop off!",
+  "We love a glow-up moment",
+  "Prompt so clean, it's giving",
+] as const;
+
 export function PromptInputPanel({
   prompt,
   controls,
@@ -71,9 +86,20 @@ export function PromptInputPanel({
   onEnhance: () => void;
   onCancel: () => void;
 }) {
+  const [genZIndex, setGenZIndex] = useState(0);
+
+  useEffect(() => {
+    if (!running) {
+      setGenZIndex(0);
+      return;
+    }
+    const id = window.setInterval(() => {
+      setGenZIndex((prev) => (prev + 1) % GENZ_ENHANCING_MESSAGES.length);
+    }, 2000);
+    return () => window.clearInterval(id);
+  }, [running]);
+
   const changeControls = (next: Partial<WorkspaceControls>) => {
-    // Level and section edits keep preset identity; an explicit task-type
-    // switch is a manual selection and clears it.
     const clearsPreset = next.taskType !== undefined && next.taskType !== controls.taskType;
     dispatch({
       type: "controls-changed",
@@ -82,78 +108,169 @@ export function PromptInputPanel({
   };
 
   return (
-    <section className="space-y-5" aria-labelledby="prompt-input-title">
-      <div>
-        <h2 id="prompt-input-title" className="font-medium text-lg">
-          Your Prompt
-        </h2>
-        <p className="text-muted-foreground text-sm">
-          Start with rough wording. Your prompt type and level shape the enhancement.
-        </p>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="prompt-input">Prompt</Label>
-        <Textarea
-          id="prompt-input"
-          className="max-h-64 min-h-44 resize-y overflow-y-auto field-sizing-fixed"
-          placeholder="Describe what you want to accomplish..."
-          value={prompt}
-          onChange={(event) => dispatch({ type: "prompt-changed", prompt: event.target.value })}
-          disabled={running}
-        />
-        <p className={promptLength > 15_000 ? "text-destructive text-xs" : "text-muted-foreground text-xs"}>
-          {promptLength.toLocaleString()} / 15,000 characters
-        </p>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="prompt-type">Prompt Type</Label>
-          <Select
-            value={controls.taskType}
-            onValueChange={(value) => changeControls({ taskType: value as WorkspaceControls["taskType"] })}
-            disabled={running}
-          >
-            <SelectTrigger id="prompt-type" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              <SelectItem value="auto">Auto Detect</SelectItem>
-              {TASK_TYPES.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <div className="flex flex-col gap-6">
+      {/* Greeting — persistent; only changes to Enhancing... when running */}
+      {!running ? (
+        <div className="flex flex-col items-center gap-2 py-6 text-center sm:py-10">
+          <div className="flex items-center gap-2">
+            <Sparkles className="size-7 text-lime-600 dark:text-lime-400" />
+            <h2 className="font-serif text-3xl tracking-tight sm:text-4xl">Ready to enhance?</h2>
+          </div>
+          <p className="text-muted-foreground text-sm">Turn rough instructions into clear, structured prompts.</p>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="enhancement-level">Enhancement Level</Label>
-          <Select
-            value={controls.level}
-            onValueChange={(value) => changeControls({ level: value as EnhancementLevel })}
+      ) : (
+        <div className="flex flex-col items-center gap-2 py-6 text-center sm:py-10">
+          <div className="flex items-center gap-2">
+            <Spinner className="size-7 text-lime-600 dark:text-lime-400" />
+            <h2 className="font-serif text-3xl tracking-tight sm:text-4xl">Enhancing...</h2>
+          </div>
+          <p key={genZIndex} className="fade-in animate-in text-muted-foreground text-sm duration-300">
+            {GENZ_ENHANCING_MESSAGES[genZIndex]}
+          </p>
+        </div>
+      )}
+
+      {/* Chat input card — rounded-2xl like Claude */}
+      <div className="rounded-2xl border bg-card shadow-sm">
+        <div className="p-4 sm:p-5">
+          <Textarea
+            id="prompt-input"
+            placeholder="Paste your rough prompt here to enhance..."
+            className="max-h-64 min-h-28 resize-none border-0 bg-transparent px-1 py-1 text-base shadow-none placeholder:text-muted-foreground/70 focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0 md:text-base dark:bg-transparent"
+            value={prompt}
+            onChange={(event) => dispatch({ type: "prompt-changed", prompt: event.target.value })}
             disabled={running}
-          >
-            <SelectTrigger id="enhancement-level" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              {LEVELS.map((level) => (
-                <SelectItem key={level.value} value={level.value}>
-                  {level.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
+        </div>
+
+        {/* Bottom toolbar inside card */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/20 px-3 py-3 sm:px-4">
+          <div className="flex items-center gap-2">
+            <div className="hidden items-center gap-1.5 sm:flex">
+              <Select
+                value={controls.taskType}
+                onValueChange={(value) => changeControls({ taskType: value as WorkspaceControls["taskType"] })}
+                disabled={running}
+              >
+                <SelectTrigger size="sm" className="h-7 rounded-full bg-background px-3 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  <SelectItem value="auto">Auto Detect</SelectItem>
+                  {TASK_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <span className="hidden text-muted-foreground text-xs sm:inline">
+              {promptLength.toLocaleString()} / 15,000
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs sm:hidden">{promptLength.toLocaleString()} / 15k</span>
+            <div className="hidden sm:flex">
+              <Select
+                value={controls.level}
+                onValueChange={(value) => changeControls({ level: value as EnhancementLevel })}
+                disabled={running}
+              >
+                <SelectTrigger size="sm" className="h-7 rounded-full bg-background px-3 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  {LEVELS.map((level) => (
+                    <SelectItem key={level.value} value={level.value}>
+                      {level.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {!running ? (
+              <Button
+                type="button"
+                size="sm"
+                className="px-5"
+                onClick={onEnhance}
+                disabled={running || prompt.trim().length === 0}
+              >
+                Enhance
+              </Button>
+            ) : (
+              <Button type="button" variant="outline" size="sm" onClick={onCancel}>
+                Cancel
+              </Button>
+            )}
+          </div>
         </div>
       </div>
-      <fieldset className="space-y-3">
-        <legend className="font-medium text-sm">Include Sections</legend>
-        <div className="grid gap-2 sm:grid-cols-2">
+
+      {/* Mobile selects */}
+      <div className="grid gap-3 sm:hidden">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="prompt-type-mobile" className="text-xs">
+              Prompt Type
+            </Label>
+            <Select
+              value={controls.taskType}
+              onValueChange={(value) => changeControls({ taskType: value as WorkspaceControls["taskType"] })}
+              disabled={running}
+            >
+              <SelectTrigger id="prompt-type-mobile" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                <SelectItem value="auto">Auto Detect</SelectItem>
+                {TASK_TYPES.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="enhancement-level-mobile" className="text-xs">
+              Level
+            </Label>
+            <Select
+              value={controls.level}
+              onValueChange={(value) => changeControls({ level: value as EnhancementLevel })}
+              disabled={running}
+            >
+              <SelectTrigger id="enhancement-level-mobile" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                {LEVELS.map((level) => (
+                  <SelectItem key={level.value} value={level.value}>
+                    {level.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      {/* Include Sections — as small pills */}
+      <fieldset className="space-y-2">
+        <legend className="text-center font-medium text-muted-foreground text-xs">Include Sections</legend>
+        <div className="flex flex-wrap justify-center gap-2">
           {SECTION_OPTIONS.map((section) => {
             const checked = controls.sections.includes(section.value);
             const sectionId = `section-option-${section.value}`;
             return (
-              <div key={section.value} className="flex items-center gap-2 text-sm">
+              <label
+                key={section.value}
+                htmlFor={sectionId}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors ${checked ? "border-lime-500/30 bg-lime-500/10 text-lime-700 dark:border-lime-400/30 dark:bg-lime-400/10 dark:text-lime-300" : "border-border bg-card text-muted-foreground hover:bg-muted"}`}
+              >
                 <Checkbox
                   id={sectionId}
                   checked={checked}
@@ -164,34 +281,31 @@ export function PromptInputPanel({
                       : [...controls.sections, section.value];
                     changeControls({ sections });
                   }}
+                  className="size-3.5 rounded-full data-checked:bg-lime-600"
                 />
-                <Label htmlFor={sectionId} className="font-normal">
-                  {section.label}
-                </Label>
-              </div>
+                {section.label}
+              </label>
             );
           })}
         </div>
       </fieldset>
-      {stale && <p className="text-amber-600 text-sm">Controls changed. Click Enhance to generate a new result.</p>}
+
+      {stale && (
+        <p className="text-center text-amber-600 text-sm">Controls changed. Click Enhance to generate a new result.</p>
+      )}
       {error && (
-        <p className="text-destructive text-sm" role="alert">
+        <p className="text-center text-destructive text-sm" role="alert">
           {error}
         </p>
       )}
       <div aria-live="polite" className="sr-only">
         {running ? "Enhancing your prompt." : ""}
       </div>
-      <div className="flex gap-2">
-        <Button type="button" className="flex-1" onClick={onEnhance} disabled={running}>
-          {running && <Spinner />} {running ? "Enhancing..." : "Enhance Prompt"}
-        </Button>
-        {running && (
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-        )}
-      </div>
-    </section>
+      {running && (
+        <p className="flex items-center justify-center gap-2 text-muted-foreground text-sm" role="status">
+          <Spinner /> Enhancing your prompt...
+        </p>
+      )}
+    </div>
   );
 }

@@ -1,11 +1,17 @@
 "use client";
 
-import { Copy, Download, Edit3, RefreshCw, Save, Wand2 } from "lucide-react";
+import { Copy, Download, Edit3, MoreVertical, RefreshCw, Save, Wand2 } from "lucide-react";
 
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { MarkdownPreview } from "@/components/markdown/markdown-preview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -44,6 +50,7 @@ export function ResultPanel({
   onRetry,
   onUseLocalRules,
   fallbackPending = false,
+  onReEnhance,
 }: {
   state: WorkspaceState;
   onViewChange: (view: WorkspaceState["view"]) => void;
@@ -56,12 +63,13 @@ export function ResultPanel({
   onRetry?: () => void;
   onUseLocalRules?: () => void;
   fallbackPending?: boolean;
+  onReEnhance?: () => void;
 }) {
   const document = state.document;
   const source = sourceLabel(state);
   if (!document) {
     return (
-      <Card className="h-full min-h-96">
+      <Card className="flex h-full min-h-96 w-full flex-col">
         <CardHeader>
           <CardTitle>Result</CardTitle>
         </CardHeader>
@@ -89,7 +97,7 @@ export function ResultPanel({
   }
 
   return (
-    <Card className="min-h-96">
+    <Card className="flex min-h-96 w-full flex-col">
       <CardHeader className="gap-3 border-b">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -98,19 +106,28 @@ export function ResultPanel({
               <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground text-xs">{source}</span>
             )}
           </div>
-          <div className="flex flex-wrap justify-end gap-1">
-            <Button type="button" variant="outline" size="sm" onClick={onCopy}>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={onCopy} aria-label="Copy result">
               <Copy /> Copy
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => onViewChange("edit")}>
-              <Edit3 /> Edit
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={onSave} disabled={!onSave || saveDisabled}>
-              {saving ? <Spinner /> : <Save />} {saving ? "Saving..." : "Save"}
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={onExport}>
-              <Download /> Export
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="ghost" size="icon-sm" aria-label="Result actions">
+                  <MoreVertical />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => onViewChange("edit")}>
+                  <Edit3 /> Edit in result
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onSave} disabled={!onSave || saveDisabled}>
+                  {saving ? <Spinner /> : <Save />} {saving ? "Saving..." : "Save to library"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onExport}>
+                  <Download /> Export markdown
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
         {state.actionMessage && (
@@ -154,25 +171,31 @@ export function ResultPanel({
           </p>
         )}
       </CardHeader>
-      <CardContent className="pt-4">
-        <Tabs value={state.view} onValueChange={(value) => onViewChange(value as WorkspaceState["view"])}>
+      <CardContent className="flex flex-1 flex-col pt-4">
+        <Tabs
+          value={state.view}
+          onValueChange={(value) => onViewChange(value as WorkspaceState["view"])}
+          className="flex flex-1 flex-col"
+        >
           <TabsList>
             <TabsTrigger value="result">Result</TabsTrigger>
             <TabsTrigger value="preview">Preview</TabsTrigger>
             <TabsTrigger value="edit">Edit</TabsTrigger>
           </TabsList>
-          <TabsContent value="result" className="pt-4">
+          <TabsContent value="result" className="flex-1 pt-4">
             <textarea
               aria-label="Enhanced Markdown result"
-              className="min-h-80 w-full resize-y rounded-lg border bg-muted/20 p-4 font-mono text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="min-h-80 w-full flex-1 resize-y rounded-lg border bg-muted/20 p-4 font-mono text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
               value={document.markdown}
               readOnly
             />
           </TabsContent>
-          <TabsContent value="preview" className="min-h-80 rounded-lg border bg-muted/20 p-4 pt-4">
-            <MarkdownPreview markdown={document.markdown} />
+          <TabsContent value="preview" className="flex-1 pt-4">
+            <div className="min-h-80 rounded-lg border bg-muted/20 p-4">
+              <MarkdownPreview markdown={document.markdown} />
+            </div>
           </TabsContent>
-          <TabsContent value="edit" className="pt-4">
+          <TabsContent value="edit" className="flex-1 pt-4">
             <MarkdownEditor
               value={document.markdown}
               initialValue={document.generatedMarkdown}
@@ -180,6 +203,13 @@ export function ResultPanel({
             />
           </TabsContent>
         </Tabs>
+        {onReEnhance && (
+          <div className="mt-4 flex justify-end border-t pt-4">
+            <Button type="button" onClick={onReEnhance} disabled={state.status === "running"}>
+              <Wand2 /> Re-Enhance
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

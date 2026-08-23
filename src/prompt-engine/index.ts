@@ -13,7 +13,7 @@ import type { ClassificationResult } from "./classifier/classify-prompt";
 import { classifyPrompt } from "./classifier/classify-prompt";
 import { generateMarkdown } from "./generator/generate-markdown";
 import { type ParsedPrompt, parsePrompt } from "./parser/parse-prompt";
-import { polishLight } from "./rules/light-polish";
+import { correctGrammarOnly, polishLight } from "./rules/light-polish";
 import { selectSections } from "./rules/select-sections";
 import { resolveTemplate } from "./templates/resolve-template";
 import type { SectionId } from "./templates/template-types";
@@ -174,6 +174,22 @@ export function enhancePrompt(raw: string, options?: EnhancePromptOptions): Enha
 
   if (raw.trim().length === 0) {
     return { analysis, classification, resolved, markdown: "" };
+  }
+  const isExplicitSections = options?.sections !== undefined;
+  const isGrammarOnly =
+    isExplicitSections && (sections.length === 0 || (sections.length === 1 && sections[0] === "objective"));
+
+  if (isGrammarOnly) {
+    // User explicitly selected no sections (only objective) — grammar-only mode:
+    // correct grammar and enhance structure of the actual input, no preset,
+    // no markdown headings/bullets, just plain corrected text.
+    const corrected = correctGrammarOnly(raw);
+    return {
+      analysis,
+      classification,
+      resolved: { ...resolved, sections: [], presetId: null } as unknown as ResolvedEnhancement,
+      markdown: corrected,
+    };
   }
 
   if (level === "light") {

@@ -1,8 +1,10 @@
 import Link from "next/link";
 
+import { Code, Palette, PenLine, Search, Shapes } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PROMPT_PRESETS, type PromptPresetId } from "@/lib/prompt-presets";
 
 const GROUPS = [
@@ -32,35 +34,57 @@ const DESCRIPTIONS: Record<PromptPresetId, string> = {
   "image-prompt": "Specify subject, style, lighting, camera, and negative constraints.",
 };
 
+const CATEGORY_ICON: Record<string, typeof Shapes> = {
+  development: Code,
+  writing: PenLine,
+  research: Search,
+  design: Palette,
+};
+
 export function PresetGallery() {
   return (
     <div className="space-y-8">
       {GROUPS.map((group) => {
         const presets = PROMPT_PRESETS.filter((preset) => preset.category === group.category);
+        const Icon = CATEGORY_ICON[group.category] ?? Shapes;
         return (
-          <section key={group.category} className="space-y-3" aria-labelledby={`${group.category}-presets-title`}>
-            <div>
+          <section
+            key={group.category}
+            className="flex flex-col gap-2"
+            aria-labelledby={`${group.category}-presets-title`}
+          >
+            <div className="flex items-center justify-between">
               <h2 id={`${group.category}-presets-title`} className="font-medium text-lg">
                 {group.label}
               </h2>
-              <p className="text-muted-foreground text-sm">
-                Start with a focused configuration, then adjust it on Enhance.
-              </p>
+              <span className="text-muted-foreground text-sm">{presets.length} presets</span>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
               {presets.map((preset) => (
-                <Card key={preset.id} size="sm">
+                <Card key={preset.id} size="sm" className="flex flex-col">
                   <CardHeader>
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle>{preset.label}</CardTitle>
-                      <Badge variant="secondary" className="shrink-0 capitalize">
-                        {preset.level}
+                    <div className="flex min-w-0 items-center gap-2">
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-lime-500/10 text-lime-600 dark:bg-lime-400/10 dark:text-lime-400">
+                        <Icon className="size-4.5" />
+                      </div>
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <CardTitle className="truncate text-lime-600 leading-none dark:text-lime-400">
+                          {preset.label}
+                        </CardTitle>
+                        <CardDescription className="text-xs capitalize">{preset.category}</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex flex-1 flex-col gap-3">
+                    <p className="line-clamp-2 text-muted-foreground text-xs leading-relaxed">
+                      {DESCRIPTIONS[preset.id]}
+                    </p>
+                    <div className="flex justify-start">
+                      <Badge variant="secondary" className="shrink-0 text-xs capitalize">
+                        {preset.category}
                       </Badge>
                     </div>
-                    <p className="text-muted-foreground text-sm">{DESCRIPTIONS[preset.id]}</p>
-                  </CardHeader>
-                  <CardContent>
-                    <Button asChild variant="outline" className="w-full">
+                    <Button asChild variant="outline" size="sm" className="mt-auto w-full">
                       <Link href={`/?preset=${preset.id}`}>Use preset</Link>
                     </Button>
                   </CardContent>

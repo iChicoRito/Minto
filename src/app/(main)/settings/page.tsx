@@ -2,10 +2,10 @@ import { SettingsScreen } from "./_components/settings-screen";
 
 export default function SettingsPage() {
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-5xl space-y-5">
       <div>
-        <h1 className="font-semibold text-xl">Settings</h1>
-        <p className="text-muted-foreground text-sm">Control your defaults, appearance, and local data.</p>
+        <h1 className="font-semibold text-2xl tracking-tight">Settings</h1>
+        <p className="text-muted-foreground text-sm">Customize your Prompt Enhancer experience and manage your data.</p>
       </div>
       <SettingsScreen />
     </div>

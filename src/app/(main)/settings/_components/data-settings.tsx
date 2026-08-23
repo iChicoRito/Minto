@@ -195,31 +195,67 @@ export function DataSettings({
               </Button>
             </div>
           )}
-          <div className="flex flex-wrap gap-2 border-t pt-4">
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={!ready || pendingAction !== null}
-              onClick={() => void clearHistory()}
-            >
-              {pendingAction === "clear-history" && <Spinner />} <Trash2 /> Clear history
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={!ready || pendingAction !== null}
-              onClick={() => void clearLibrary()}
-            >
-              {pendingAction === "clear-library" && <Spinner />} Clear library
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={!ready || pendingAction !== null}
-              onClick={() => void onClearAll()}
-            >
-              {pendingAction === "clear-all" && <Spinner />} <Trash2 /> Clear all local data
-            </Button>
+          <div className="rounded-lg border border-destructive/30">
+            <div className="border-b bg-destructive/5 px-4 py-3 dark:bg-destructive/10">
+              <h3 className="font-semibold text-destructive text-sm">Danger zone</h3>
+              <p className="text-muted-foreground text-xs">Irreversible actions. Please proceed with caution.</p>
+            </div>
+            <div className="divide-y divide-border">
+              <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-0.5">
+                  <p className="font-medium text-sm">Clear history</p>
+                  <p className="text-muted-foreground text-xs">
+                    Remove all history entries. Library prompts will remain.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground dark:border-destructive/40"
+                  disabled={!ready || pendingAction !== null}
+                  onClick={() => void clearHistory()}
+                >
+                  {pendingAction === "clear-history" ? <Spinner /> : <Trash2 className="size-4" />} Clear history
+                </Button>
+              </div>
+              <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-0.5">
+                  <p className="font-medium text-sm">Clear library</p>
+                  <p className="text-muted-foreground text-xs">
+                    Remove all saved prompts and folders. History will remain.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground dark:border-destructive/40"
+                  disabled={!ready || pendingAction !== null}
+                  onClick={() => void clearLibrary()}
+                >
+                  {pendingAction === "clear-library" ? <Spinner /> : <Trash2 className="size-4" />} Clear library
+                </Button>
+              </div>
+              <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-0.5">
+                  <p className="font-medium text-sm">Clear all local data</p>
+                  <p className="text-muted-foreground text-xs">
+                    Permanently delete everything, including history, library, folders, and settings.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground dark:border-destructive/40"
+                  disabled={!ready || pendingAction !== null}
+                  onClick={() => void onClearAll()}
+                >
+                  <Trash2 className="size-4" /> Clear all
+                </Button>
+              </div>
+            </div>
           </div>
           {memoryStatus === "loading" && <p className="text-muted-foreground text-sm">Opening local storageâ€¦</p>}
           {memoryStatus === "unavailable" && (

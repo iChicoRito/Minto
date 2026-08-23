@@ -4,6 +4,7 @@ import { useEffect, useReducer, useRef, useState } from "react";
 
 import { toast } from "sonner";
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useConfirm } from "@/hooks/use-confirm";
 import { createAiEnhancementClient, type EnhancementService } from "@/lib/ai-enhancement/client";
 import { ENHANCEMENT_API_VERSION } from "@/lib/ai-enhancement/contracts";
@@ -44,6 +45,7 @@ export function EnhancerWorkspace() {
   const [historyPending, setHistoryPending] = useState(false);
   const [savePending, setSavePending] = useState(false);
   const [fallbackPending, setFallbackPending] = useState(false);
+  const [activeTab, setActiveTab] = useState<"enhance" | "result">("enhance");
   const preferencesApplied = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const aiService = useRef<EnhancementService | null>(null);
@@ -192,8 +194,9 @@ export function EnhancerWorkspace() {
     }
   };
 
-  const runEnhancement = async (service: EnhancementService) => {
-    const validation = validatePrompt(state.prompt);
+  const runEnhancement = async (service: EnhancementService, promptOverride?: string) => {
+    const effectivePrompt = promptOverride ?? state.prompt;
+    const validation = validatePrompt(effectivePrompt);
     if (!validation.ok) {
       dispatch({ type: "input-error", message: validation.message });
       return;
@@ -217,15 +220,19 @@ export function EnhancerWorkspace() {
       const response = await service.enhance(
         {
           version: ENHANCEMENT_API_VERSION,
-          prompt: state.prompt,
+          prompt: effectivePrompt,
           selection: buildSelection(),
           level: state.controls.level,
           sections: state.controls.sections,
         },
         { signal: controller.signal },
       );
-      const document = documentFromEnhancement(runId, state.prompt, state.controls, response.result);
+      const document = documentFromEnhancement(runId, effectivePrompt, state.controls, response.result);
       dispatch({ type: "enhancement-succeeded", runId, document });
+      setActiveTab("result");
+      // Clear the enhance input after success so the field is fresh for next prompt.
+      // Keep editing only in Result tab (markdown). Prompt input is cleared.
+      dispatch({ type: "prompt-changed", prompt: "" });
 
       const record: HistoryRecord = {
         id: crypto.randomUUID(),
@@ -262,10 +269,35 @@ export function EnhancerWorkspace() {
   const enhance = () => {
     const service = aiService.current;
     if (service === null) {
-      dispatch({ type: "input-error", message: describeCode("service_disabled"), fallbackEligible: true });
+      dispatch({ type: "input-error", message: describeCode("service_disabled"), fallbackEligible: false });
+      toast.error("AI enhancement is unavailable. Please check your connection and try again.");
       return;
     }
     void runEnhancement(service);
+  };
+
+  const reEnhance = () => {
+    if (!state.document) return;
+    // Re-enhance from Result tab without requiring a return to Enhance.
+    // Use the current Enhance input if user typed something new, otherwise
+    // fall back to the last result's source (edited markdown if dirty).
+    const source =
+      state.prompt.trim().length > 0
+        ? state.prompt
+        : state.document.dirty
+          ? state.document.markdown
+          : state.document.originalPrompt;
+    const service = aiService.current;
+    if (service === null) {
+      dispatch({ type: "input-error", message: describeCode("service_disabled"), fallbackEligible: false });
+      toast.error("AI enhancement is unavailable. Please check your connection and try again.");
+      return;
+    }
+    // Ensure the prompt state reflects the source for validation/history
+    if (state.prompt.trim() === "") {
+      dispatch({ type: "prompt-changed", prompt: source });
+    }
+    void runEnhancement(service, source);
   };
 
   const cancel = () => {
@@ -277,10 +309,13 @@ export function EnhancerWorkspace() {
   };
 
   const useLocalRules = () => {
-    const service = localService.current;
-    if (service === null || fallbackPending) return;
-    setFallbackPending(true);
-    void runEnhancement(service).finally(() => setFallbackPending(false));
+    // Local Rules are disabled per user request — show feedback instead of fallback
+    toast.error("Local rules are disabled. AI enhancement is required. Please try again.");
+    dispatch({
+      type: "input-error",
+      message: "Local rules are disabled. Please retry with AI.",
+      fallbackEligible: false,
+    });
   };
 
   const onControlsChange = (controls: typeof state.controls) => {
@@ -349,36 +384,49 @@ export function EnhancerWorkspace() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-6 xl:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.2fr)]">
-        <PromptInputPanel
-          prompt={state.prompt}
-          controls={state.controls}
-          error={state.error !== null && !state.error.fallbackEligible ? state.error.message : null}
-          promptLength={state.prompt.length}
-          stale={state.document?.stale ?? false}
-          running={state.status === "running"}
-          dispatch={(action) => {
-            if (action.type === "controls-changed") onControlsChange(action.controls);
-            else dispatch(action);
-          }}
-          onEnhance={enhance}
-          onCancel={cancel}
-        />
-        <ResultPanel
-          state={state}
-          onViewChange={(view) => dispatch({ type: "view-changed", view })}
-          onMarkdownChange={(markdown) => dispatch({ type: "markdown-changed", markdown })}
-          onCopy={copy}
-          onExport={exportMarkdown}
-          onSave={save}
-          saveDisabled={savePending || historyPending || memoryStatus !== "ready"}
-          saving={savePending}
-          onRetry={retry}
-          onUseLocalRules={useLocalRules}
-          fallbackPending={fallbackPending}
-        />
-      </div>
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "enhance" | "result")} className="w-full">
+        <TabsList className="mx-auto grid w-fit grid-cols-2 rounded-full bg-muted p-1">
+          <TabsTrigger value="enhance" className="rounded-full px-6 data-active:bg-background data-active:shadow-sm">
+            Enhance
+          </TabsTrigger>
+          <TabsTrigger value="result" className="rounded-full px-6 data-active:bg-background data-active:shadow-sm">
+            Result
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="enhance" className="mx-auto w-full max-w-3xl pt-4">
+          <PromptInputPanel
+            prompt={state.prompt}
+            controls={state.controls}
+            error={state.error !== null && !state.error.fallbackEligible ? state.error.message : null}
+            promptLength={state.prompt.length}
+            stale={state.document?.stale ?? false}
+            running={state.status === "running"}
+            dispatch={(action) => {
+              if (action.type === "controls-changed") onControlsChange(action.controls);
+              else dispatch(action);
+            }}
+            onEnhance={enhance}
+            onCancel={cancel}
+          />
+        </TabsContent>
+        <TabsContent value="result" className="w-full pt-4">
+          <ResultPanel
+            state={state}
+            onViewChange={(view) => dispatch({ type: "view-changed", view })}
+            onMarkdownChange={(markdown) => dispatch({ type: "markdown-changed", markdown })}
+            onCopy={copy}
+            onExport={exportMarkdown}
+            onSave={save}
+            saveDisabled={savePending || historyPending || memoryStatus !== "ready"}
+            saving={savePending}
+            onRetry={retry}
+            onUseLocalRules={useLocalRules}
+            fallbackPending={fallbackPending}
+            onReEnhance={reEnhance}
+          />
+        </TabsContent>
+      </Tabs>
       {dialog}
     </div>
   );
