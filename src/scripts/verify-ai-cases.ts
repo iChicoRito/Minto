@@ -1,5 +1,4 @@
-﻿import apiEnhance from "../../api/enhance";
-import { AiEnhancementClientError, createAiEnhancementClient } from "../lib/ai-enhancement/client";
+﻿import { AiEnhancementClientError, createAiEnhancementClient } from "../lib/ai-enhancement/client";
 import type { EnhancementRequestV1, EnhancementSelectionV1 } from "../lib/ai-enhancement/contracts";
 import {
   ENHANCEMENT_API_VERSION,
@@ -22,7 +21,7 @@ import type { EnhancementLevel, PromptCategory, PromptTaskType, SectionId } from
 import { enhancePrompt, resolveTemplate } from "../prompt-engine";
 import { SECTION_TITLES } from "../prompt-engine/templates/template-types";
 import { DEFAULT_OPENROUTER_TIMEOUT_MS, getAiConfig } from "../server/ai/config";
-import { createAiHttpHandler } from "../server/ai/http-handler";
+import { handleAiHttpRequest as apiEnhance, createAiHttpHandler } from "../server/ai/http-handler";
 import { type GeneratedDocument, parseModelDocument, renderGeneratedMarkdown } from "../server/ai/model-output";
 import { createOpenRouterAdapter } from "../server/ai/openrouter-adapter";
 import { buildSystemInstruction, createOrchestrator } from "../server/ai/orchestrator";

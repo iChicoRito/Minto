@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
-    "api/enhance.ts": {
+    "src/app/api/enhance/route.ts": {
       "maxDuration": 75,
       "regions": ["iad1"],
       "supportsCancellation": true

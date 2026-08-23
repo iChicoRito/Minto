@@ -2,10 +2,8 @@ import { handleAiHttpRequest } from "@/server/ai/http-handler";
 
 import { appendFile } from "node:fs/promises";
 
-// Local development serves the enhancement API through this Route Handler.
-// The standalone Vercel deployment uses root api/enhance.ts instead; the
-// static export excludes this directory entirely (see build-static.mjs).
 export const dynamic = "force-dynamic";
+export const maxDuration = 75;
 
 function isDebug(): boolean {
   return process.env.NODE_ENV !== "production" && process.env.ENHANCE_DEBUG_LOG === "1";
