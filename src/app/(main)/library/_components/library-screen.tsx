@@ -40,6 +40,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useConfirm } from "@/hooks/use-confirm";
+import { usePrompt } from "@/hooks/use-prompt";
 import { copyText } from "@/lib/browser-actions.client";
 import { filterLibraryPrompts, normalizeFolderName, normalizeTags } from "@/lib/browser-memory/record-utils";
 import type { SavedPrompt } from "@/lib/browser-memory/types";
@@ -67,6 +68,7 @@ function formatLevel(level: string) {
 function LibraryContent() {
   const { status, repository } = useMemory();
   const { confirm, dialog } = useConfirm();
+  const { prompt: showPrompt, dialog: promptDialog } = usePrompt();
   const prompts = useLiveQuery(
     () => (status === "ready" ? repository.listPrompts() : Promise.resolve([])),
     [repository, status],
@@ -135,28 +137,33 @@ function LibraryContent() {
     }
   };
 
-  const safePrompt = (message: string, defaultValue?: string): string | null => {
-    if (typeof window === "undefined") return null;
-    try {
-      // window.prompt throws "prompt() is not supported." on server/unsupported contexts
-      return window.prompt(message, defaultValue);
-    } catch {
-      return null;
-    }
-  };
-
-  const rename = (prompt: SavedPrompt) => {
-    const title = safePrompt("Rename prompt", prompt.title);
+  const rename = async (prompt: SavedPrompt) => {
+    const title = await showPrompt({
+      title: "Rename prompt",
+      defaultValue: prompt.title,
+      placeholder: "Enter prompt title",
+      confirmLabel: "Rename",
+    });
     if (title?.trim()) void update(prompt.id, { title: title.trim(), updatedAt: Date.now() });
   };
 
-  const editTags = (prompt: SavedPrompt) => {
-    const value = safePrompt("Tags, separated by commas", prompt.tags.join(", "));
+  const editTags = async (prompt: SavedPrompt) => {
+    const value = await showPrompt({
+      title: "Edit tags",
+      description: "Separate tags with commas",
+      defaultValue: prompt.tags.join(", "),
+      placeholder: "tag1, tag2, tag3",
+      confirmLabel: "Save",
+    });
     if (value !== null) void update(prompt.id, { tags: normalizeTags(value.split(",")), updatedAt: Date.now() });
   };
 
-  const createFolder = () => {
-    const name = safePrompt("Folder name");
+  const createFolder = async () => {
+    const name = await showPrompt({
+      title: "New folder",
+      placeholder: "Folder name",
+      confirmLabel: "Create",
+    });
     if (!name?.trim()) return;
     const normalized = normalizeFolderName(name);
     void repository
@@ -302,9 +309,16 @@ function LibraryContent() {
                       variant="ghost"
                       size="sm"
                       className="h-7 flex-1 text-xs"
-                      onClick={() => {
+                      onClick={async () => {
                         const folder = folders.find((item) => item.id === folderId);
-                        const name = folder && safePrompt("Rename folder", folder.name);
+                        const name = folder
+                          ? await showPrompt({
+                              title: "Rename folder",
+                              defaultValue: folder.name,
+                              placeholder: "Folder name",
+                              confirmLabel: "Rename",
+                            })
+                          : null;
                         if (name?.trim())
                           void repository
                             .renameFolder(folderId, name)
@@ -343,8 +357,12 @@ function LibraryContent() {
                     variant="ghost"
                     size="icon-sm"
                     aria-label="Add tag filter"
-                    onClick={() => {
-                      const value = safePrompt("Filter by tag");
+                    onClick={async () => {
+                      const value = await showPrompt({
+                        title: "Filter by tag",
+                        placeholder: "Enter tag",
+                        confirmLabel: "Filter",
+                      });
                       if (value?.trim()) {
                         setTag(value.trim().toLowerCase());
                         setPage(1);
@@ -648,6 +666,7 @@ function LibraryContent() {
         </p>
       )}
       {dialog}
+      {promptDialog}
     </div>
   );
 }

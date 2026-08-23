@@ -22,7 +22,13 @@ await cp(sourceRoot, path.join(stage, "src"), {
 await cp(path.join(root, "public"), path.join(stage, "public"), { recursive: true });
 // The standalone Vercel Function source is staged so type checks can resolve
 // its imports; Next ignores the root api/ directory during static export.
-await cp(path.join(root, "api"), path.join(stage, "api"), { recursive: true });
+// api/ was removed for Vercel Next route - skip if missing (static export doesn't need it).
+try {
+  await access(path.join(root, "api"));
+  await cp(path.join(root, "api"), path.join(stage, "api"), { recursive: true });
+} catch {
+  // no api dir - static export uses src/app/api route only when present
+}
 try {
   await access(path.join(stage, "src/app/(template)"));
   throw new Error("Static staging source contains the frozen template.");
