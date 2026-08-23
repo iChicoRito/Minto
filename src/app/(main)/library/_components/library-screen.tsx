@@ -135,18 +135,28 @@ function LibraryContent() {
     }
   };
 
+  const safePrompt = (message: string, defaultValue?: string): string | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      // window.prompt throws "prompt() is not supported." on server/unsupported contexts
+      return window.prompt(message, defaultValue);
+    } catch {
+      return null;
+    }
+  };
+
   const rename = (prompt: SavedPrompt) => {
-    const title = window.prompt("Rename prompt", prompt.title);
+    const title = safePrompt("Rename prompt", prompt.title);
     if (title?.trim()) void update(prompt.id, { title: title.trim(), updatedAt: Date.now() });
   };
 
   const editTags = (prompt: SavedPrompt) => {
-    const value = window.prompt("Tags, separated by commas", prompt.tags.join(", "));
+    const value = safePrompt("Tags, separated by commas", prompt.tags.join(", "));
     if (value !== null) void update(prompt.id, { tags: normalizeTags(value.split(",")), updatedAt: Date.now() });
   };
 
   const createFolder = () => {
-    const name = window.prompt("Folder name");
+    const name = safePrompt("Folder name");
     if (!name?.trim()) return;
     const normalized = normalizeFolderName(name);
     void repository
@@ -294,7 +304,7 @@ function LibraryContent() {
                       className="h-7 flex-1 text-xs"
                       onClick={() => {
                         const folder = folders.find((item) => item.id === folderId);
-                        const name = folder && window.prompt("Rename folder", folder.name);
+                        const name = folder && safePrompt("Rename folder", folder.name);
                         if (name?.trim())
                           void repository
                             .renameFolder(folderId, name)
@@ -334,7 +344,7 @@ function LibraryContent() {
                     size="icon-sm"
                     aria-label="Add tag filter"
                     onClick={() => {
-                      const value = window.prompt("Filter by tag");
+                      const value = safePrompt("Filter by tag");
                       if (value?.trim()) {
                         setTag(value.trim().toLowerCase());
                         setPage(1);
