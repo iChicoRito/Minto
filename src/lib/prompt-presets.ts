@@ -34,6 +34,14 @@ export const PROMPT_PRESETS = [
   preset("ui-design", "UI Design", "ui-review"),
   preset("ux-review", "UX Review", "ui-review"),
   preset("image-prompt", "Image Prompt", "image-prompt"),
+  {
+    id: "grammar-correction",
+    label: "Grammar Correction",
+    category: "writing",
+    taskType: "rewrite",
+    level: "standard",
+    sections: [],
+  } as const,
 ] as const satisfies readonly PromptPresetRecord[];
 
 function ids<const Presets extends readonly PromptPresetRecord[]>(

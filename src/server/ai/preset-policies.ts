@@ -400,6 +400,11 @@ export const PRESET_AI_POLICIES = {
     "style-direction": "Specify subject, composition, style, lighting, color, camera, and render direction.",
     "output-format": "Separate the positive image prompt from negative constraints and technical limits.",
   }),
+  "grammar-correction": makePresetPolicy(
+    "grammar-correction",
+    "Correct grammar, spelling, punctuation, and structure while preserving the original meaning and intent; return only the corrected plain text without extra sections, headings, or formatting.",
+    {},
+  ),
 } as const satisfies Record<PromptPresetId, PresetAiPolicy>;
 
 export function sectionPolicyFor(policy: PresetAiPolicy | TaskAiPolicy, sectionId: SectionId): ResolvedSectionPolicy {

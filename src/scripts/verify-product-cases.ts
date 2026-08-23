@@ -37,9 +37,9 @@ export const PRODUCT_CASES = [
     },
   },
   {
-    name: "preset catalogue contains the 17 named mappings",
+    name: "preset catalogue contains the 18 named mappings",
     run: () => {
-      if (PROMPT_PRESETS.length !== 17) throw new Error(`expected 17 presets, got ${PROMPT_PRESETS.length}`);
+      if (PROMPT_PRESETS.length !== 18) throw new Error(`expected 18 presets, got ${PROMPT_PRESETS.length}`);
       if (getPromptPreset("api-design")?.taskType !== "feature") throw new Error("API Design mapping drifted");
       if (getPromptPreset("ui-design")?.taskType !== "ui-review") throw new Error("UI Design mapping drifted");
       if (getPromptPreset("bug-fix")?.category !== "development") throw new Error("Bug Fix category drifted");

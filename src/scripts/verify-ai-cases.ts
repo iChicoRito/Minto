@@ -245,6 +245,14 @@ const EXPECTED_PRESET_SNAPSHOT = [
     level: "standard",
     sections: ["objective", "style-direction", "output-format"],
   },
+  {
+    id: "grammar-correction",
+    label: "Grammar Correction",
+    taskType: "rewrite",
+    category: "writing",
+    level: "standard",
+    sections: [],
+  },
 ] as const satisfies readonly ExpectedPresetSnapshot[];
 
 const EXPECTED_SECTION_FORMATS = {
@@ -388,7 +396,7 @@ export const AI_CASES = [
   {
     name: "every existing preset id is accepted without a second catalogue",
     run: () => {
-      assert.equal(PROMPT_PRESET_IDS.length, 17);
+      assert.equal(PROMPT_PRESET_IDS.length, 18);
       for (const presetId of PROMPT_PRESET_IDS) {
         const parsed = EnhancementRequestV1Schema.safeParse(request({ kind: "preset", presetId }));
         assert.equal(parsed.success, true, `preset ${presetId} was rejected`);
@@ -609,9 +617,13 @@ export const AI_CASES = [
       assert.deepEqual(Object.keys(PRESET_AI_POLICIES), PROMPT_PRESET_IDS);
       assert.deepEqual(Object.keys(MANUAL_TASK_POLICIES), TASK_TYPES);
 
-      for (const policy of Object.values(PRESET_AI_POLICIES)) {
+      for (const [id, policy] of Object.entries(PRESET_AI_POLICIES)) {
         assert.ok(policy.purpose.length > 0);
-        assert.ok(policy.sections.length > 0);
+        if (id === "grammar-correction") {
+          assert.equal(policy.sections.length, 0);
+        } else {
+          assert.ok(policy.sections.length > 0);
+        }
       }
       for (const policy of Object.values(MANUAL_TASK_POLICIES)) {
         assert.ok(policy.purpose.length > 0);

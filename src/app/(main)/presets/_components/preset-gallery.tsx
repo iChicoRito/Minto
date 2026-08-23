@@ -32,6 +32,7 @@ const DESCRIPTIONS: Record<PromptPresetId, string> = {
   "ui-design": "Set direction for hierarchy, states, responsiveness, and accessibility.",
   "ux-review": "Surface prioritized usability issues with actionable recommendations.",
   "image-prompt": "Specify subject, style, lighting, camera, and negative constraints.",
+  "grammar-correction": "Fix grammar, spelling, and punctuation while preserving meaning.",
 };
 
 const CATEGORY_ICON: Record<string, typeof Shapes> = {
