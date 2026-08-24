@@ -1,11 +1,11 @@
-﻿import { Code, Database, Lock, ShieldCheck, Sparkles, User } from "lucide-react";
+import { Database, Lock, ShieldCheck, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function AboutPage() {
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col gap-6">
       <div>
         <h1 className="font-semibold text-2xl tracking-tight">About Minto</h1>
         <p className="text-muted-foreground text-sm">
@@ -13,8 +13,8 @@ export default function AboutPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="rounded-xl lg:col-span-2">
+      <div className="grid gap-4">
+        <Card className="rounded-xl">
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-lime-500/10 text-lime-600 dark:bg-lime-400/10 dark:text-lime-400">
@@ -39,33 +39,6 @@ export default function AboutPage() {
               <Badge variant="outline" className="capitalize">
                 No account required
               </Badge>
-              <Badge variant="outline" className="capitalize">
-                Works offline
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-xl border-lime-500/20">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 text-lime-600 dark:text-lime-400">
-              <User className="size-4" />
-              <span className="font-medium text-sm">Developer</span>
-            </div>
-            <CardTitle className="text-base leading-tight">Mr. Mark Adrianne Salunga</CardTitle>
-            <CardDescription>Creator & maintainer of Minto</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex size-16 items-center justify-center rounded-full bg-lime-500/10 text-lime-600 dark:bg-lime-400/10 dark:text-lime-400">
-              <User className="size-8" />
-            </div>
-            <p className="text-muted-foreground text-xs leading-relaxed">
-              Crafting simple, local-first tools with clear data boundaries. Minto is designed to be fast, transparent,
-              and respectful of your work.
-            </p>
-            <div className="flex items-center gap-2 pt-1">
-              <Code className="size-3.5 text-muted-foreground" />
-              <span className="text-muted-foreground text-xs">Built with care for builders.</span>
             </div>
           </CardContent>
         </Card>
@@ -122,7 +95,7 @@ export default function AboutPage() {
         </CardContent>
       </Card>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4 text-muted-foreground text-xs">
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t pt-4 text-muted-foreground text-xs">
         <span>© {new Date().getFullYear()} Minto — by Mr. Mark Adrianne Salunga. All rights reserved.</span>
         <span className="inline-flex items-center gap-1.5">
           <span className="size-2 rounded-full bg-lime-500" /> Local-first • Private by design
