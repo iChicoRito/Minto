@@ -2,6 +2,7 @@
 
 import { useEffect, useReducer, useRef, useState } from "react";
 
+import { useLiveQuery } from "dexie-react-hooks";
 import { toast } from "sonner";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,6 +13,8 @@ import { createDeterministicEnhancementService } from "@/lib/ai-enhancement/dete
 import { copyText, requestTextDownload } from "@/lib/browser-actions.client";
 import { titleFromPrompt } from "@/lib/browser-memory/record-utils";
 import type { HistoryRecord, SavedPrompt } from "@/lib/browser-memory/types";
+import { createPredictiveTextClient } from "@/lib/predictive-text/client";
+import type { PredictiveTextService } from "@/lib/predictive-text/contracts";
 import { DEFAULT_ENHANCEMENT_LEVEL, DEFAULT_PROMPT_SECTIONS } from "@/lib/preferences/prompt-preferences";
 import { getPromptPreset } from "@/lib/prompt-presets";
 import { enhancePrompt, validatePrompt } from "@/prompt-engine";
@@ -38,6 +41,7 @@ export function EnhancerWorkspace() {
   const defaultLevel = usePreferencesStore((state) => state.defaultEnhancementLevel);
   const defaultSections = usePreferencesStore((state) => state.defaultPromptSections);
   const defaultPromptType = usePreferencesStore((state) => state.defaultPromptType);
+  const historyEnabled = usePreferencesStore((state) => state.historyEnabled);
   const historyMaxEntries = usePreferencesStore((state) => state.historyMaxEntries);
   const preferencesSynced = usePreferencesStore((state) => state.isSynced);
   const { status: memoryStatus, repository } = useMemory();
@@ -54,6 +58,19 @@ export function EnhancerWorkspace() {
     : null;
   const localService = useRef<EnhancementService | null>(null);
   localService.current ??= createDeterministicEnhancementService();
+  const predictionService = useRef<PredictiveTextService | null>(null);
+  predictionService.current ??= ENDPOINT
+    ? createPredictiveTextClient({
+        endpoint: ENDPOINT,
+        allowLocalHttpForTests: process.env.NODE_ENV !== "production",
+      })
+    : null;
+  const historyRecords = useLiveQuery(
+    () => (memoryStatus === "ready" ? repository.listHistory() : Promise.resolve([])),
+    [memoryStatus, repository],
+  );
+  const history = historyRecords ?? [];
+  const historyResolved = memoryStatus === "unavailable" || (memoryStatus === "ready" && historyRecords !== undefined);
   const [state, dispatch] = useReducer(
     workspaceReducer,
     {
@@ -178,6 +195,7 @@ export function EnhancerWorkspace() {
   // Every successful enhancement is recorded in local history, capped by the
   // configured maximum-entries preference.
   const saveToHistory = async (runId: string, record: HistoryRecord) => {
+    if (!historyEnabled) return;
     if (memoryStatus !== "ready") {
       toast.warning("Enhancement complete. Local memory is unavailable.");
       return;
@@ -402,6 +420,9 @@ export function EnhancerWorkspace() {
             promptLength={state.prompt.length}
             stale={state.document?.stale ?? false}
             running={state.status === "running"}
+            history={history}
+            historyResolved={historyResolved}
+            predictionService={predictionService.current}
             dispatch={(action) => {
               if (action.type === "controls-changed") onControlsChange(action.controls);
               else dispatch(action);

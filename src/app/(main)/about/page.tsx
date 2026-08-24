@@ -60,8 +60,8 @@ export default function AboutPage() {
               <User className="size-8" />
             </div>
             <p className="text-muted-foreground text-xs leading-relaxed">
-              Crafting simple, private tools that stay on your device. Minto is designed to be fast, transparent, and
-              respectful of your work.
+              Crafting simple, local-first tools with clear data boundaries. Minto is designed to be fast, transparent,
+              and respectful of your work.
             </p>
             <div className="flex items-center gap-2 pt-1">
               <Code className="size-3.5 text-muted-foreground" />
@@ -78,8 +78,8 @@ export default function AboutPage() {
               <ShieldCheck className="size-5" />
             </div>
             <div>
-              <CardTitle className="text-sm">Privacy First — No Data Collection</CardTitle>
-              <CardDescription>Everything stays in your browser. Nothing is sent anywhere.</CardDescription>
+              <CardTitle className="text-sm">Privacy First — Clear Data Boundaries</CardTitle>
+              <CardDescription>Local data stays in your browser; online AI features are optional.</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -89,9 +89,9 @@ export default function AboutPage() {
               <div className="flex size-8 items-center justify-center rounded-lg bg-background text-lime-600 dark:text-lime-400">
                 <Database className="size-4" />
               </div>
-              <p className="font-medium text-sm">100% Local</p>
+              <p className="font-medium text-sm">Local Data</p>
               <p className="text-muted-foreground text-xs leading-relaxed">
-                History, library, folders and settings are stored locally in your browser via IndexedDB.
+                History, library, folders, settings, and local prediction ranking stay in your browser via IndexedDB.
               </p>
             </div>
             <div className="flex flex-col gap-2 rounded-xl border bg-muted/30 p-4">
@@ -100,7 +100,8 @@ export default function AboutPage() {
               </div>
               <p className="font-medium text-sm">No Tracking</p>
               <p className="text-muted-foreground text-xs leading-relaxed">
-                No analytics, no cookies for tracking, no external databases. Your prompts never leave your device.
+                No analytics or tracking database is introduced. History is never transmitted for prediction, while
+                optional online AI features have separate provider data handling.
               </p>
             </div>
             <div className="flex flex-col gap-2 rounded-xl border bg-muted/30 p-4">
@@ -109,12 +110,14 @@ export default function AboutPage() {
               </div>
               <p className="font-medium text-sm">You Own Your Data</p>
               <p className="text-muted-foreground text-xs leading-relaxed">
-                Export a backup anytime or clear everything with one click. No hidden retention.
+                Export a backup anytime or clear everything with one click. Local app data is not synced.
               </p>
             </div>
           </div>
           <p className="pt-4 text-muted-foreground text-xs">
-            Minto does not collect, store, or share any personal data on any server. All processing happens locally.
+            Local ranking and browser data stay on this device. Explicit AI enhancement and unmatched predictive drafts
+            may use the configured online provider; do not use sensitive or confidential prompts with online AI
+            features. Provider retention and training terms are documented in the project README.
           </p>
         </CardContent>
       </Card>

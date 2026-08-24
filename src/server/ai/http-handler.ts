@@ -7,6 +7,7 @@ import {
   MAX_REQUEST_BODY_BYTES,
   OPENROUTER_MODEL,
 } from "../../lib/ai-enhancement/contracts";
+import { PredictiveTextRequestV1Schema, PredictiveTextSuccessV1Schema } from "../../lib/predictive-text/contracts";
 import { type Admission, AdmissionBusyError, AdmissionUnavailableError, createAdmission } from "./admission";
 import { getAiConfig } from "./config";
 import {
@@ -19,6 +20,7 @@ import {
 } from "./errors";
 import { createOpenRouterAdapter, type ModelAdapter, type ModelCompletionMetadata } from "./openrouter-adapter";
 import { AiOrchestrationError, createOrchestrator, type EnhancementOrchestrator } from "./orchestrator";
+import { createPredictiveTextOrchestrator, type PredictiveTextOrchestrator } from "./predictive-text-orchestrator";
 
 export const ALLOWED_ORIGIN = "https://ichicorito.github.io" as const;
 
@@ -43,6 +45,7 @@ export type AiHttpHandlerOptions = {
   environment?: Readonly<Record<string, string | undefined>>;
   allowedOrigin?: string;
   orchestrator?: EnhancementOrchestrator;
+  predictor?: PredictiveTextOrchestrator;
   model?: ModelAdapter;
   admission?: Admission;
   requestId?: () => string;
@@ -52,6 +55,7 @@ export type AiHttpHandlerOptions = {
 
 type HandlerRuntime = {
   orchestrator: EnhancementOrchestrator;
+  predictor: PredictiveTextOrchestrator;
   configured: boolean;
   allowedOrigin: string | undefined;
   requestId: () => string;
@@ -80,7 +84,8 @@ function createRuntime(options: AiHttpHandlerOptions): HandlerRuntime {
   const environment = options.environment ?? process.env;
   const requestId = options.requestId ?? defaultRequestId;
   const clock = options.clock ?? Date.now;
-  const configuredByInjection = options.orchestrator !== undefined || options.model !== undefined;
+  const configuredByInjection =
+    options.orchestrator !== undefined || options.predictor !== undefined || options.model !== undefined;
   const explicitEnvironment = options.environment !== undefined;
   const config = getAiConfig(environment);
   const configured = config !== null || (configuredByInjection && !explicitEnvironment);
@@ -89,8 +94,17 @@ function createRuntime(options: AiHttpHandlerOptions): HandlerRuntime {
   );
 
   if (options.orchestrator !== undefined) {
+    const model = options.model ?? disabledModel();
+    const admission = options.admission ?? createAdmission({ environment });
     return {
       orchestrator: options.orchestrator,
+      predictor:
+        options.predictor ??
+        createPredictiveTextOrchestrator({
+          model,
+          admission,
+          requestId,
+        }),
       configured,
       allowedOrigin,
       requestId,
@@ -104,6 +118,13 @@ function createRuntime(options: AiHttpHandlerOptions): HandlerRuntime {
   const admission = options.admission ?? createAdmission({ environment });
   return {
     orchestrator: createOrchestrator({ model, admission, requestId }),
+    predictor:
+      options.predictor ??
+      createPredictiveTextOrchestrator({
+        model,
+        admission,
+        requestId,
+      }),
     configured,
     allowedOrigin,
     requestId,
@@ -188,6 +209,39 @@ async function runAiHttpRequest(request: Request, runtime: HandlerRuntime): Prom
       response = errorResponse(requestId, "invalid_request", 400, false, undefined, runtime.allowedOrigin);
       status = 400;
       code = "invalid_request";
+      return response;
+    }
+
+    if (isRecord(parsedJson) && parsedJson.kind === "predictive-text") {
+      const parsedPredictiveRequest = PredictiveTextRequestV1Schema.safeParse(parsedJson);
+      if (!parsedPredictiveRequest.success) {
+        response = errorResponse(requestId, "invalid_request", 400, false, undefined, runtime.allowedOrigin);
+        status = 400;
+        code = "invalid_request";
+        return response;
+      }
+
+      const result = await runtime.predictor.complete(parsedPredictiveRequest.data, {
+        signal: request.signal,
+        onCompletionMetadata: (metadata) => {
+          completionMetadata = metadata;
+          provider = metadata.provider;
+          model = metadata.model;
+        },
+      });
+      const success = PredictiveTextSuccessV1Schema.safeParse({ ...result, requestId });
+      if (!success.success) {
+        response = errorResponse(requestId, "internal_error", 500, false, undefined, runtime.allowedOrigin);
+        status = 500;
+        code = "internal_error";
+        return response;
+      }
+
+      provider ??= "openrouter";
+      model ??= OPENROUTER_MODEL;
+      status = 200;
+      code = "success";
+      response = corsResponse(JSON.stringify(success.data), 200, runtime.allowedOrigin);
       return response;
     }
 
@@ -312,6 +366,10 @@ function normalizeOrigin(value: string | undefined): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function mapError(error: unknown): MappedError {

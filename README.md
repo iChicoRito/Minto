@@ -7,9 +7,16 @@ your browser. An optional AI enhancement path is also supported when a public en
 
 - The built-in rule engine runs locally in your browser.
 - History, the prompt library, and settings are stored locally in this browser. They are not encrypted or synced.
+- Predictive text ranks exact and contextual continuations from local history in the browser. History remains in
+  IndexedDB and is never included in predictive API requests.
+- When local history has no sufficiently relevant match, only the current draft prefix may be sent to the configured
+  enhancement API for optional AI prediction. Predictive AI is unavailable when `NEXT_PUBLIC_ENHANCEMENT_API_URL` is
+  blank.
 - AI enhancement is different: the prompt and resulting completion leave your browser and are sent to the configured
   enhancement API, which forwards them to OpenRouter and the Ox Alpha model operated by Stealth, an anonymous
   third-party operator.
+- Provider retention and sensitivity warnings described below also apply to predictive fallback. Do not use sensitive or
+  confidential drafts with online AI features.
 - OpenRouter retains prompts and completions. The Ox Alpha page says that data is not used for training, but Stealth's
   terms permit use for training, evaluation, and improvement. Treat sensitive or confidential information as prohibited.
 - The AI pipeline treats prompt text as untrusted and applies bounded safeguards, but no prompt-injection defense is
@@ -31,6 +38,7 @@ Targeted checks:
 npm run verify:engine
 npm run verify:product
 npm run verify:ai
+npm run verify:predictive-text
 npm run verify:performance
 npx tsc --noEmit
 ```

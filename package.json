@@ -17,12 +17,11 @@
     "verify:engine": "ts-node -P tsconfig.scripts.json src/scripts/verify-engine.ts",
     "verify:product": "ts-node -P tsconfig.scripts.json src/scripts/verify-product.ts",
     "verify:ai": "ts-node -P tsconfig.scripts.json src/scripts/verify-ai.ts",
+    "verify:predictive-text": "ts-node -P tsconfig.scripts.json src/scripts/verify-predictive-text.ts",
     "verify:performance": "ts-node -P tsconfig.scripts.json src/scripts/verify-performance.ts"
   },
   "lint-staged": {
-    "*.{js,ts,jsx,tsx}": [
-      "biome check --write --no-errors-on-unmatched"
-    ]
+    "*.{js,ts,jsx,tsx}": ["biome check --write --no-errors-on-unmatched"]
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

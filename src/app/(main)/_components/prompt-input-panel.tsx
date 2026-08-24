@@ -9,10 +9,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { Textarea } from "@/components/ui/textarea";
+import type { PredictiveHistoryEntry, PredictiveTextService } from "@/lib/predictive-text/contracts";
 import { SECTION_TITLES, type SectionId } from "@/prompt-engine/templates/template-types";
 import type { EnhancementLevel, PromptTaskType } from "@/prompt-engine/types";
 
+import { PredictivePromptInput } from "./predictive-prompt-input";
 import type { WorkspaceAction, WorkspaceControls } from "./workspace-state";
 
 const TASK_TYPES: readonly { value: PromptTaskType; label: string }[] = [
@@ -72,6 +73,9 @@ export function PromptInputPanel({
   promptLength,
   stale,
   running,
+  history,
+  historyResolved,
+  predictionService,
   dispatch,
   onEnhance,
   onCancel,
@@ -82,6 +86,9 @@ export function PromptInputPanel({
   promptLength: number;
   stale: boolean;
   running: boolean;
+  history: readonly PredictiveHistoryEntry[];
+  historyResolved: boolean;
+  predictionService: PredictiveTextService | null;
   dispatch: Dispatch<WorkspaceAction>;
   onEnhance: () => void;
   onCancel: () => void;
@@ -133,14 +140,19 @@ export function PromptInputPanel({
       {/* Chat input card — rounded-2xl like Claude */}
       <div className="rounded-2xl border bg-card shadow-sm">
         <div className="p-4 sm:p-5">
-          <Textarea
+          <PredictivePromptInput
             id="prompt-input"
-            placeholder="Paste your rough prompt here to enhance..."
-            className="max-h-64 min-h-28 resize-none border-0 bg-transparent px-1 py-1 text-base shadow-none placeholder:text-muted-foreground/70 focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0 md:text-base dark:bg-transparent"
             value={prompt}
-            onChange={(event) => dispatch({ type: "prompt-changed", prompt: event.target.value })}
             disabled={running}
+            history={history}
+            historyResolved={historyResolved}
+            predictionService={predictionService}
+            onValueChange={(value) => dispatch({ type: "prompt-changed", prompt: value })}
           />
+          <p className="pt-2 text-muted-foreground text-xs">
+            Predictions use local history first. When no history match is relevant, the current draft—not your
+            history—may be sent to the configured AI service.
+          </p>
         </div>
 
         {/* Bottom toolbar inside card */}
