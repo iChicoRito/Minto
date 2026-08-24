@@ -367,8 +367,17 @@ export const PREDICTIVE_TEXT_CASES: readonly VerificationCase[] = [
       assert.equal(modelInput?.reasoningEffort, "low");
       assert.equal(modelInput?.completionBudget, 2048);
       assert.equal(modelInput?.responseFormat, "json_object");
+      assert.equal(modelInput?.systemInstruction.includes("dominant goal"), true);
+      assert.equal(modelInput?.systemInstruction.includes("intended audience/context"), true);
+      assert.equal(modelInput?.systemInstruction.includes("desired outcome"), true);
+      assert.equal(
+        modelInput?.systemInstruction.includes("individual words or isolated keywords only as supporting evidence"),
+        true,
+      );
+      assert.equal(modelInput?.systemInstruction.includes("unrelated keyword lists"), true);
+      assert.equal(modelInput?.systemInstruction.includes("invent specifics"), true);
       assert.equal(modelInput?.systemInstruction.includes("Create a weekly"), false);
-      assert.deepEqual(JSON.parse(modelInput?.userContent ?? "{}"), { sourcePrefix: "Create a weekly" });
+      assert.equal(modelInput?.userContent, JSON.stringify({ sourcePrefix: "Create a weekly" }));
     },
   },
   {

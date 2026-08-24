@@ -15,6 +15,7 @@ export type PredictivePromptInputProps = {
   historyResolved: boolean;
   predictionService: PredictiveTextService | null;
   onValueChange: (value: string) => void;
+  onSubmit: () => void;
 };
 
 const TEXTAREA_CLASS_NAME =
@@ -28,6 +29,7 @@ export function PredictivePromptInput({
   historyResolved,
   predictionService,
   onValueChange,
+  onSubmit,
 }: PredictivePromptInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const mirrorRef = useRef<HTMLDivElement | null>(null);
@@ -95,6 +97,11 @@ export function PredictivePromptInput({
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (composing || event.nativeEvent.isComposing) return;
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      onSubmit();
+      return;
+    }
     if (event.key === "Escape" && (suggestion !== null || pending)) {
       event.preventDefault();
       dismiss();
@@ -136,7 +143,14 @@ export function PredictivePromptInput({
           style={mirrorWidth === null ? undefined : { width: mirrorWidth }}
         >
           <span className="text-transparent">{value}</span>
-          {suggestion !== null && <span className="text-muted-foreground/50">{suggestion.completion}</span>}
+          {suggestion !== null && (
+            <>
+              <span className="text-muted-foreground/30">{suggestion.completion}</span>
+              <kbd className="ml-1 rounded border border-lime-500/30 bg-lime-500/10 px-1 py-0.5 align-middle font-mono text-[10px] text-lime-700 dark:border-lime-400/30 dark:bg-lime-400/10 dark:text-lime-300">
+                Tab
+              </kbd>
+            </>
+          )}
         </div>
         <Textarea
           ref={textareaRef}
@@ -166,13 +180,12 @@ export function PredictivePromptInput({
           onScroll={syncScroll}
           disabled={disabled}
           aria-autocomplete="inline"
-          aria-keyshortcuts={suggestionAvailable ? "Tab" : undefined}
+          aria-keyshortcuts={suggestionAvailable ? "Enter Tab" : "Enter"}
           aria-describedby={`${helpId} ${statusId}`}
         />
       </div>
       <p id={helpId} className="sr-only">
-        Predictions use local history first. When no history match is relevant, the current draft—not your history—may
-        be sent to the configured AI service.
+        Press Enter to submit. Press Shift+Enter to add a new line. Press Tab to accept an inline suggestion.
       </p>
       <p id={statusId} aria-live="polite" className="sr-only">
         {suggestionAvailable ? "Prediction available. Press Tab to accept, or Escape to dismiss." : ""}

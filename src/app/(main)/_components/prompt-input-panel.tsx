@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { type Dispatch, useEffect, useState } from "react";
 
@@ -148,11 +148,8 @@ export function PromptInputPanel({
             historyResolved={historyResolved}
             predictionService={predictionService}
             onValueChange={(value) => dispatch({ type: "prompt-changed", prompt: value })}
+            onSubmit={onEnhance}
           />
-          <p className="pt-2 text-muted-foreground text-xs">
-            Predictions use local history first. When no history match is relevant, the current draft—not your
-            history—may be sent to the configured AI service.
-          </p>
         </div>
 
         {/* Bottom toolbar inside card */}

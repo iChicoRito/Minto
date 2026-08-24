@@ -7,11 +7,11 @@ your browser. An optional AI enhancement path is also supported when a public en
 
 - The built-in rule engine runs locally in your browser.
 - History, the prompt library, and settings are stored locally in this browser. They are not encrypted or synced.
-- Predictive text ranks exact and contextual continuations from local history in the browser. History remains in
-  IndexedDB and is never included in predictive API requests.
-- When local history has no sufficiently relevant match, only the current draft prefix may be sent to the configured
-  enhancement API for optional AI prediction. Predictive AI is unavailable when `NEXT_PUBLIC_ENHANCEMENT_API_URL` is
-  blank.
+- Predictive text checks exact and contextual continuations from local history first. History remains in IndexedDB and
+  is never included in predictive API requests.
+- Only when no relevant history match exists does the configured AI infer the current draft's overall goal and purpose
+  to suggest an appendable continuation. The current draft may be sent to the configured enhancement API for optional
+  AI prediction. Predictive AI is unavailable when `NEXT_PUBLIC_ENHANCEMENT_API_URL` is blank.
 - AI enhancement is different: the prompt and resulting completion leave your browser and are sent to the configured
   enhancement API, which forwards them to OpenRouter and the Ox Alpha model operated by Stealth, an anonymous
   third-party operator.
