@@ -10,10 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import type { PredictiveHistoryEntry, PredictiveTextService } from "@/lib/predictive-text/contracts";
+import type { PromptPreset } from "@/lib/prompt-presets";
 import { SECTION_TITLES, type SectionId } from "@/prompt-engine/templates/template-types";
 import type { EnhancementLevel, PromptTaskType } from "@/prompt-engine/types";
 
 import { PredictivePromptInput } from "./predictive-prompt-input";
+import { PresetPickerDialog } from "./preset-picker-dialog";
 import type { WorkspaceAction, WorkspaceControls } from "./workspace-state";
 
 const TASK_TYPES: readonly { value: PromptTaskType; label: string }[] = [
@@ -114,6 +116,15 @@ export function PromptInputPanel({
     });
   };
 
+  const applyPreset = (preset: PromptPreset) => {
+    changeControls({
+      taskType: preset.taskType,
+      level: preset.level,
+      sections: preset.sections,
+      presetId: preset.id,
+    });
+  };
+
   return (
     <div className="flex flex-col gap-6">
       {/* Greeting — persistent; only changes to Enhancing... when running */}
@@ -155,6 +166,7 @@ export function PromptInputPanel({
         {/* Bottom toolbar inside card */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/20 px-3 py-3 sm:px-4">
           <div className="flex items-center gap-2">
+            <PresetPickerDialog value={controls.presetId} disabled={running} onSelect={applyPreset} />
             <div className="hidden items-center gap-1.5 sm:flex">
               <Select
                 value={controls.taskType}
