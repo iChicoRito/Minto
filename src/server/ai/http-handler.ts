@@ -1,15 +1,16 @@
 import {
+  DEEPSEEK_MODEL,
   ENHANCEMENT_API_VERSION,
   type EnhancementErrorCode,
   EnhancementErrorV1Schema,
   EnhancementRequestV1Schema,
   EnhancementSuccessV1Schema,
   MAX_REQUEST_BODY_BYTES,
-  OPENROUTER_MODEL,
 } from "../../lib/ai-enhancement/contracts";
 import { PredictiveTextRequestV1Schema, PredictiveTextSuccessV1Schema } from "../../lib/predictive-text/contracts";
 import { type Admission, AdmissionBusyError, AdmissionUnavailableError, createAdmission } from "./admission";
 import { getAiConfig } from "./config";
+import { createDeepSeekAdapter } from "./deepseek-adapter";
 import {
   AiConfigurationError,
   AiInputError,
@@ -18,7 +19,7 @@ import {
   isAiProviderError,
   publicAiError,
 } from "./errors";
-import { createOpenRouterAdapter, type ModelAdapter, type ModelCompletionMetadata } from "./openrouter-adapter";
+import type { ModelAdapter, ModelCompletionMetadata } from "./model-adapter";
 import { AiOrchestrationError, createOrchestrator, type EnhancementOrchestrator } from "./orchestrator";
 import { createPredictiveTextOrchestrator, type PredictiveTextOrchestrator } from "./predictive-text-orchestrator";
 
@@ -33,10 +34,10 @@ export type AiOperationalEvent = Readonly<{
   inputTokens?: number;
   outputTokens?: number;
   totalTokens?: number;
-  provider?: "openrouter";
-  model?: typeof OPENROUTER_MODEL;
+  provider?: string;
+  model?: string;
   generationId?: string;
-  cost: 0;
+  cost?: number;
   fallback?: false;
   errorClass?: EnhancementErrorCode;
 }>;
@@ -92,7 +93,6 @@ function createRuntime(options: AiHttpHandlerOptions): HandlerRuntime {
   const allowedOrigin = normalizeOrigin(
     options.allowedOrigin ?? environment.ALLOWED_ORIGIN ?? (configuredByInjection ? ALLOWED_ORIGIN : undefined),
   );
-
   if (options.orchestrator !== undefined) {
     const model = options.model ?? disabledModel();
     const admission = options.admission ?? createAdmission({ environment });
@@ -114,7 +114,15 @@ function createRuntime(options: AiHttpHandlerOptions): HandlerRuntime {
   }
 
   const model =
-    options.model ?? (config === null ? disabledModel() : createOpenRouterAdapter({ apiKey: config.apiKey }));
+    options.model ??
+    (config === null
+      ? disabledModel()
+      : createDeepSeekAdapter({
+          apiKey: config.apiKey,
+          endpoint: config.endpoint,
+          model: config.model,
+          timeoutMs: config.timeoutMs,
+        }));
   const admission = options.admission ?? createAdmission({ environment });
   return {
     orchestrator: createOrchestrator({ model, admission, requestId }),
@@ -139,10 +147,10 @@ async function runAiHttpRequest(request: Request, runtime: HandlerRuntime): Prom
   let requestBytes = 0;
   let status = 500;
   let code: EnhancementErrorCode | "success" = "internal_error";
-  let provider: "openrouter" | undefined;
-  let model: typeof OPENROUTER_MODEL | undefined;
+  let provider: string | undefined;
+  let model: string | undefined;
   let completionMetadata: ModelCompletionMetadata | undefined;
-  let response: Response;
+  let response: Response = new Response(null, { status: 500 });
 
   try {
     const originAllowed =
@@ -237,8 +245,8 @@ async function runAiHttpRequest(request: Request, runtime: HandlerRuntime): Prom
         return response;
       }
 
-      provider ??= "openrouter";
-      model ??= OPENROUTER_MODEL;
+      provider ??= "deepseek";
+      model ??= DEEPSEEK_MODEL;
       status = 200;
       code = "success";
       response = corsResponse(JSON.stringify(success.data), 200, runtime.allowedOrigin);
@@ -269,8 +277,8 @@ async function runAiHttpRequest(request: Request, runtime: HandlerRuntime): Prom
       return response;
     }
 
-    provider ??= "openrouter";
-    model ??= OPENROUTER_MODEL;
+    provider ??= "deepseek";
+    model ??= DEEPSEEK_MODEL;
     status = 200;
     code = "success";
     response = corsResponse(JSON.stringify(success.data), 200, runtime.allowedOrigin);
@@ -298,7 +306,6 @@ async function runAiHttpRequest(request: Request, runtime: HandlerRuntime): Prom
         code,
         durationMs: elapsed,
         requestBytes,
-        cost: 0,
         ...(provider === undefined ? {} : { provider }),
         ...(model === undefined ? {} : { model }),
         ...(completionMetadata?.generationId === undefined ? {} : { generationId: completionMetadata.generationId }),

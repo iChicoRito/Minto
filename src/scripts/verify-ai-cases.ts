@@ -1,6 +1,7 @@
-﻿import { AiEnhancementClientError, createAiEnhancementClient } from "../lib/ai-enhancement/client";
+import { AiEnhancementClientError, createAiEnhancementClient } from "../lib/ai-enhancement/client";
 import type { EnhancementRequestV1, EnhancementSelectionV1 } from "../lib/ai-enhancement/contracts";
 import {
+  DEEPSEEK_MODEL,
   ENHANCEMENT_API_VERSION,
   ENHANCEMENT_ERROR_CODES,
   ENHANCEMENT_LEVEL_CONFIG,
@@ -13,17 +14,16 @@ import {
   MAX_PROMPT_CHARACTERS,
   MAX_REQUEST_BODY_BYTES,
   MAX_SELECTED_SECTIONS,
-  OPENROUTER_MODEL,
 } from "../lib/ai-enhancement/contracts";
 import { enhanceDeterministically } from "../lib/ai-enhancement/deterministic-service";
 import { getPromptPreset, PROMPT_PRESET_IDS, PROMPT_PRESETS } from "../lib/prompt-presets";
 import type { EnhancementLevel, PromptCategory, PromptTaskType, SectionId } from "../prompt-engine";
 import { enhancePrompt, resolveTemplate } from "../prompt-engine";
 import { SECTION_TITLES } from "../prompt-engine/templates/template-types";
-import { DEFAULT_OPENROUTER_TIMEOUT_MS, getAiConfig } from "../server/ai/config";
+import { DEFAULT_DEEPSEEK_TIMEOUT_MS, getAiConfig } from "../server/ai/config";
+import { createDeepSeekAdapter } from "../server/ai/deepseek-adapter";
 import { handleAiHttpRequest as apiEnhance, createAiHttpHandler } from "../server/ai/http-handler";
 import { type GeneratedDocument, parseModelDocument, renderGeneratedMarkdown } from "../server/ai/model-output";
-import { createOpenRouterAdapter } from "../server/ai/openrouter-adapter";
 import { buildSystemInstruction, createOrchestrator } from "../server/ai/orchestrator";
 import { resolveTrustedPolicy } from "../server/ai/policy-resolver";
 import {
@@ -362,7 +362,7 @@ function validResult() {
       reasoningEffort: "high",
     },
     markdown: "# Objective\n\nResolve the login flow.",
-    generation: { kind: "ai", provider: "openrouter", model: OPENROUTER_MODEL },
+    generation: { kind: "ai", provider: "deepseek", model: DEEPSEEK_MODEL },
   };
 }
 
@@ -384,7 +384,7 @@ export const AI_CASES = [
     name: "contract constants pin the version, model, and byte/character bounds",
     run: () => {
       assert.equal(ENHANCEMENT_API_VERSION, 1);
-      assert.equal(OPENROUTER_MODEL, "stealth/ox-alpha");
+      assert.equal(DEEPSEEK_MODEL, "deepseek-v4-flash");
       assert.equal(MAX_PROMPT_CHARACTERS, 15_000);
       assert.equal(MAX_REQUEST_BODY_BYTES, 128 * 1024);
       assert.equal(MAX_MODEL_OUTPUT_BYTES, 64 * 1024);
@@ -596,7 +596,7 @@ export const AI_CASES = [
           version: ENHANCEMENT_API_VERSION,
           ok: true,
           requestId: "req-1",
-          result: { ...validResult(), generation: { kind: "ai", provider: "other", model: OPENROUTER_MODEL } },
+          result: { ...validResult(), generation: { kind: "ai", provider: "other", model: DEEPSEEK_MODEL } },
         }).success,
         false,
       );
@@ -1114,27 +1114,27 @@ export const AI_CASES = [
         const content = Array.from({ length: 5 }, () => "x".repeat(1_900));
         const orchestrator = createOrchestrator({
           admission: {
-            acquire: async () => ({ status: "admitted", leaseId: "lease-output", expiresAt: 1, retryAfterMs: 0, retryAfterSeconds: 0, activeCount: 1, prunedCount: 0 }),
-            release: async () => undefined,
+acquire: async () => ({ status: "admitted", leaseId: "lease-output", expiresAt: 1, retryAfterMs: 0, retryAfterSeconds: 0, activeCount: 1, prunedCount: 0 }),
+release: async () => undefined,
           },
           model: {
-            complete: async () => JSON.stringify({
-              sections: [
-                { id: "objective", content },
-                { id: "requirements", content },
-                { id: "verification", content },
-              ],
-            }),
+complete: async () => JSON.stringify({
+ sections: [
+   { id: "objective", content },
+   { id: "requirements", content },
+   { id: "verification", content },
+ ],
+}),
           },
           requestId: () => "req-output",
         });
         await assert.rejects(
           orchestrator.enhance({
-            version: 1,
-            prompt: "fix the login flow",
-            selection: { kind: "manual", taskType: "bug-fix" },
-            level: "standard",
-            sections: ["objective", "requirements", "verification"],
+version: 1,
+prompt: "fix the login flow",
+selection: { kind: "manual", taskType: "bug-fix" },
+level: "standard",
+sections: ["objective", "requirements", "verification"],
           }, { signal: new AbortController().signal }),
           (error) => error.code === "output_too_large",
         );
@@ -1184,33 +1184,33 @@ export const AI_CASES = [
   {
     name: "AI config and adapter fail closed without an exact enable flag and nonblank key",
     run: () => {
-      assert.equal(getAiConfig({ OPENROUTER_API_KEY: "secret" }), null);
-      assert.equal(getAiConfig({ AI_ENHANCEMENT_ENABLED: "TRUE", OPENROUTER_API_KEY: "secret" }), null);
-      assert.equal(getAiConfig({ AI_ENHANCEMENT_ENABLED: "true", OPENROUTER_API_KEY: "   " }), null);
+      assert.equal(getAiConfig({ DEEPSEEK_API_KEY: "secret" }), null);
+      assert.equal(getAiConfig({ AI_ENHANCEMENT_ENABLED: "TRUE", DEEPSEEK_API_KEY: "secret" }), null);
+      assert.equal(getAiConfig({ AI_ENHANCEMENT_ENABLED: "true", DEEPSEEK_API_KEY: "   " }), null);
       const fetchMustNotRun = (() => {
         throw new Error("disabled configuration attempted a provider call");
       }) as typeof fetch;
       assert.throws(
-        () => createOpenRouterAdapter({ apiKey: "   ", fetchImpl: fetchMustNotRun }),
+        () => createDeepSeekAdapter({ apiKey: "   ", fetchImpl: fetchMustNotRun }),
         (error) => error instanceof Error && "code" in error && error.code === "service_disabled",
       );
 
-      const config = getAiConfig({ AI_ENHANCEMENT_ENABLED: "true", OPENROUTER_API_KEY: " secret " });
+      const config = getAiConfig({ AI_ENHANCEMENT_ENABLED: "true", DEEPSEEK_API_KEY: " secret " });
       assert.deepEqual(config, {
         apiKey: "secret",
-        endpoint: "https://openrouter.ai/api/v1/chat/completions",
-        model: "stealth/ox-alpha",
-        provider: "stealth",
-        timeoutMs: DEFAULT_OPENROUTER_TIMEOUT_MS,
+        endpoint: "https://api.deepseek.com/chat/completions",
+        model: "deepseek-v4-flash",
+        provider: "deepseek",
+        timeoutMs: DEFAULT_DEEPSEEK_TIMEOUT_MS,
       });
     },
   },
   {
-    name: "adapter builds the fixed zero-price request for every approved level",
+    name: "adapter builds the direct DeepSeek request for every approved level",
     run: () => {
       runAdapterScript(`
         const assert = require("node:assert/strict");
-        const { createOpenRouterAdapter } = require("./src/server/ai/openrouter-adapter");
+        const { createDeepSeekAdapter } = require("./src/server/ai/deepseek-adapter");
 
          const levels = [
            ["low", 2048],
@@ -1222,99 +1222,87 @@ export const AI_CASES = [
         const fakeFetch = async (input, init) => {
           calls.push({ input, init });
           return new Response(JSON.stringify({
-            id: "gen-unsafe-provider-data",
-            model: "stealth/ox-alpha",
-            choices: [{ finish_reason: "stop", message: { content: "{\\"sections\\":[]}" } }],
-            usage: { prompt_tokens: 2, completion_tokens: 3, total_tokens: 5, cost: "0" },
-            provider: "untrusted-provider-name",
-            reasoning: "do not expose",
+id: "gen-unsafe-provider-data",
+model: "deepseek-v4-flash",
+choices: [{ finish_reason: "stop", message: { content: "{\\"sections\\":[]}" } }],
+usage: { prompt_tokens: 2, completion_tokens: 3, total_tokens: 5, cost: "0" },
+provider: "untrusted-provider-name",
+reasoning: "do not expose",
           }), { status: 200, headers: { "content-type": "application/json" } });
         };
-        const adapter = createOpenRouterAdapter({ apiKey: "server-secret", fetchImpl: fakeFetch });
+        const adapter = createDeepSeekAdapter({ apiKey: "server-secret", fetchImpl: fakeFetch });
 
          for (const [effort, completionBudget] of levels) {
           const content = await adapter.complete({
-            systemInstruction: "trusted system instruction",
-            userContent: "source prompt only",
-            reasoningEffort: effort,
-             completionBudget,
+systemInstruction: "trusted system instruction",
+userContent: "source prompt only",
+reasoningEffort: effort,
+completionBudget,
            }, { signal: new AbortController().signal, onMetadata: (value) => metadata.push(value) });
           assert.equal(content, "{\\"sections\\":[]}");
         }
 
         assert.equal(calls.length, 3);
         for (const { input, init } of calls) {
-          assert.equal(input, "https://openrouter.ai/api/v1/chat/completions");
+          assert.equal(input, "https://api.deepseek.com/chat/completions");
           assert.equal(init.method, "POST");
           assert.equal(init.cache, "no-store");
            assert.deepEqual(Object.keys(init.headers).sort(), [
-             "Accept",
-             "Authorization",
-             "Content-Type",
-             "HTTP-Referer",
-             "X-OpenRouter-Metadata",
-             "X-Title",
-           ]);
+"Accept",
+"Authorization",
+"Content-Type",
+   ]);
            assert.equal(init.headers.Authorization, "Bearer server-secret");
            assert.equal(init.headers.Accept, "application/json");
            assert.equal(init.headers["Content-Type"], "application/json");
-           assert.equal(init.headers["HTTP-Referer"], "https://ichicorito.github.io/prompt-enhancer/");
-           assert.equal(init.headers["X-Title"], "Prompt Enhancer");
-           assert.equal(init.headers["X-OpenRouter-Metadata"], "true");
-
           const body = JSON.parse(init.body);
           assert.deepEqual(Object.keys(body).sort(), [
-             "max_tokens", "messages", "model", "provider", "reasoning", "response_format", "service_tier", "stream",
+"max_tokens", "messages", "model", "reasoning_effort", "response_format", "stream", "thinking",
           ]);
-          assert.equal(body.model, "stealth/ox-alpha");
-          assert.equal(body.service_tier, "default");
+          assert.equal(body.model, "deepseek-v4-flash");
+          assert.deepEqual(body.thinking, { type: "enabled" });
           assert.equal(body.stream, false);
           assert.deepEqual(body.messages, [
-            { role: "system", content: "trusted system instruction" },
-            { role: "user", content: "source prompt only" },
+{ role: "system", content: "trusted system instruction" },
+{ role: "user", content: "source prompt only" },
           ]);
-          assert.deepEqual(body.reasoning, { effort: body.reasoning.effort, exclude: true });
+          assert.equal(typeof body.reasoning_effort, "string");
           assert.deepEqual(body.response_format, { type: "json_object" });
-          assert.deepEqual(body.provider, {
-            only: ["stealth"],
-            allow_fallbacks: false,
-            require_parameters: true,
-            max_price: { prompt: "0", completion: "0", request: "0", image: "0", audio: "0" },
-          });
-           assert.equal("user" in body, false);
+
+          assert.equal("user" in body, false);
           assert.equal("tools" in body, false);
           assert.equal("plugins" in body, false);
           assert.equal("models" in body, false);
         }
-         assert.deepEqual(calls.map(({ init }) => JSON.parse(init.body).reasoning.effort), ["low", "high", "max"]);
+         assert.deepEqual(calls.map(({ init }) => JSON.parse(init.body).reasoning_effort), ["low", "high", "max"]);
          assert.deepEqual(calls.map(({ init }) => JSON.parse(init.body).max_tokens), [2048, 8192, 32768]);
          assert.deepEqual(metadata, [
            {
-             provider: "openrouter",
-             model: "stealth/ox-alpha",
-             generationId: "gen-unsafe-provider-data",
-             inputTokens: 2,
-             outputTokens: 3,
-             totalTokens: 5,
-             cost: 0,
+provider: "deepseek",
+model: "deepseek-v4-flash",
+generationId: "gen-unsafe-provider-data",
+inputTokens: 2,
+outputTokens: 3,
+totalTokens: 5,
+
            },
            {
-             provider: "openrouter",
-             model: "stealth/ox-alpha",
-             generationId: "gen-unsafe-provider-data",
-             inputTokens: 2,
-             outputTokens: 3,
-             totalTokens: 5,
-             cost: 0,
+provider: "deepseek",
+model: "deepseek-v4-flash",
+generationId: "gen-unsafe-provider-data",
+inputTokens: 2,
+outputTokens: 3,
+totalTokens: 5,
+
            },
            {
-             provider: "openrouter",
-             model: "stealth/ox-alpha",
-             generationId: "gen-unsafe-provider-data",
-             inputTokens: 2,
-             outputTokens: 3,
-             totalTokens: 5,
-             cost: 0,
+provider: "deepseek",
+model: "deepseek-v4-flash",
+generationId: "gen-unsafe-provider-data",
+inputTokens: 2,
+outputTokens: 3,
+totalTokens: 5,
+
            },
          ]);
       `);
@@ -1325,12 +1313,12 @@ export const AI_CASES = [
     run: () => {
       runAdapterScript(`
         const assert = require("node:assert/strict");
-        const { createOpenRouterAdapter } = require("./src/server/ai/openrouter-adapter");
+        const { createDeepSeekAdapter } = require("./src/server/ai/deepseek-adapter");
 
         const cases = [
           [400, "provider_refused"],
           [401, "provider_unavailable"],
-          [402, "priced_route_unavailable"],
+          [402, "provider_refused"],
           [403, "provider_unavailable"],
           [408, "provider_timeout"],
           [413, "provider_refused"],
@@ -1344,35 +1332,35 @@ export const AI_CASES = [
           [529, "provider_unavailable"],
         ];
         for (const [status, expectedCode] of cases) {
-          const adapter = createOpenRouterAdapter({
-            apiKey: "server-secret",
-            fetchImpl: async () => new Response(JSON.stringify({
-              error: {
-                code: status === 429 ? "quota" : "upstream-secret-code",
-                message: status === 429 ? "quota exceeded" : "upstream secret",
-              },
-            }), {
-              status,
-              headers: { "Retry-After": status === 429 ? "999999" : "0" },
-            }),
+          const adapter = createDeepSeekAdapter({
+apiKey: "server-secret",
+fetchImpl: async () => new Response(JSON.stringify({
+ error: {
+   code: status === 429 ? "quota" : "upstream-secret-code",
+   message: status === 429 ? "quota exceeded" : "upstream secret",
+ },
+}), {
+ status,
+ headers: { "Retry-After": status === 429 ? "999999" : "0" },
+}),
           });
           try {
-            await adapter.complete({
-              systemInstruction: "trusted",
-              userContent: "source",
-              reasoningEffort: "high",
-               completionBudget: 8192,
-            }, { signal: new AbortController().signal });
-            assert.fail("status unexpectedly succeeded: " + status);
+await adapter.complete({
+ systemInstruction: "trusted",
+ userContent: "source",
+ reasoningEffort: "high",
+  completionBudget: 8192,
+}, { signal: new AbortController().signal });
+assert.fail("status unexpectedly succeeded: " + status);
           } catch (error) {
-            assert.equal(error.code, expectedCode);
-            assert.equal(error.message.includes("upstream"), false);
-            assert.equal(error.message.includes("secret"), false);
-            if (status === 429) assert.equal(error.retryAfterSeconds, 3600);
+assert.equal(error.code, expectedCode);
+assert.equal(error.message.includes("upstream"), false);
+assert.equal(error.message.includes("secret"), false);
+if (status === 429) assert.equal(error.retryAfterSeconds, 3600);
           }
         }
 
-        const notFound = createOpenRouterAdapter({
+        const notFound = createDeepSeekAdapter({
           apiKey: "server-secret",
           fetchImpl: async () => new Response(JSON.stringify({ error: { code: "model_not_found", message: "secret model" } }), { status: 404 }),
         });
@@ -1381,7 +1369,7 @@ export const AI_CASES = [
           (error) => error.code === "model_unavailable" && !error.message.includes("secret"),
         );
 
-        const authBody = createOpenRouterAdapter({
+        const authBody = createDeepSeekAdapter({
           apiKey: "server-secret",
           fetchImpl: async () => new Response(JSON.stringify({ error: { code: "invalid_api_key", message: "secret auth" } }), { status: 400 }),
         });
@@ -1390,29 +1378,29 @@ export const AI_CASES = [
           (error) => error.code === "provider_unavailable",
         );
 
-        const paymentBody = createOpenRouterAdapter({
+        const paymentBody = createDeepSeekAdapter({
           apiKey: "server-secret",
           fetchImpl: async () => new Response(JSON.stringify({ error: { code: "payment_required", message: "secret billing" } }), { status: 400 }),
         });
         await assert.rejects(
           paymentBody.complete({ systemInstruction: "trusted", userContent: "source", reasoningEffort: "low", completionBudget: 2048 }, { signal: new AbortController().signal }),
-          (error) => error.code === "priced_route_unavailable",
+          (error) => error.code === "provider_refused",
         );
       `);
     },
   },
   {
-    name: "adapter rejects malformed success envelopes and nonzero costs",
+    name: "adapter rejects malformed success envelopes without requiring cost metadata",
     run: () => {
       runAdapterScript(`
         const assert = require("node:assert/strict");
-        const { createOpenRouterAdapter } = require("./src/server/ai/openrouter-adapter");
+        const { createDeepSeekAdapter } = require("./src/server/ai/deepseek-adapter");
 
         const valid = {
           id: "gen-safe-id",
-          model: "stealth/ox-alpha",
+          model: "deepseek-v4-flash",
           choices: [{ finish_reason: "stop", message: { content: "{\\"sections\\":[]}" } }],
-          usage: { cost: 0 },
+          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
         };
         const cases = [
           ["embedded error", { ...valid, error: { code: 400, message: "secret" } }],
@@ -1423,24 +1411,22 @@ export const AI_CASES = [
           ["length finish", { ...valid, choices: [{ finish_reason: "length", message: { content: "x" } }] }],
           ["filter finish", { ...valid, choices: [{ finish_reason: "content_filter", message: { content: "x" } }] }],
           ["error finish", { ...valid, choices: [{ finish_reason: "error", message: { content: "x" } }] }],
-          ["missing cost", { ...valid, usage: {} }],
-          ["nonzero numeric cost", { ...valid, usage: { cost: 0.0001 } }],
-          ["nonzero string cost", { ...valid, usage: { cost: "0.01" } }],
-          ["string zero variant", { ...valid, usage: { cost: "0.0" } }],
-        ];
+ ];
         for (const [name, payload] of cases) {
-          const adapter = createOpenRouterAdapter({
-            apiKey: "server-secret",
-            fetchImpl: async () => new Response(JSON.stringify(payload), { status: 200 }),
+          const adapter = createDeepSeekAdapter({
+apiKey: "server-secret",
+fetchImpl: async () => new Response(JSON.stringify(payload), { status: 200 }),
           });
           await assert.rejects(
-            adapter.complete({ systemInstruction: "trusted", userContent: "source", reasoningEffort: "high", completionBudget: 8192 }, { signal: new AbortController().signal }),
-            (error) => error.code === "invalid_provider_response" && !error.message.includes("secret"),
-            String(name),
+adapter.complete({ systemInstruction: "trusted", userContent: "source", reasoningEffort: "high", completionBudget: 8192 }, { signal: new AbortController().signal }),
+(error) =>
+ (name === "length finish" ? error.code === "output_too_large" : error.code === "invalid_provider_response") &&
+ !error.message.includes("secret"),
+String(name),
           );
         }
 
-        const malformed = createOpenRouterAdapter({
+        const malformed = createDeepSeekAdapter({
           apiKey: "server-secret",
           fetchImpl: async () => new Response("{not-json", { status: 200 }),
         });
@@ -1449,7 +1435,7 @@ export const AI_CASES = [
           (error) => error.code === "invalid_provider_response",
         );
 
-         const oversized = createOpenRouterAdapter({
+         const oversized = createDeepSeekAdapter({
           apiKey: "server-secret",
           fetchImpl: async () => new Response("x".repeat(128 * 1024), { status: 200 }),
         });
@@ -1465,15 +1451,15 @@ export const AI_CASES = [
     run: () => {
       runAdapterScript(`
         const assert = require("node:assert/strict");
-        const { createOpenRouterAdapter } = require("./src/server/ai/openrouter-adapter");
+        const { createDeepSeekAdapter } = require("./src/server/ai/deepseek-adapter");
 
         let calls = 0;
-        const timeoutAdapter = createOpenRouterAdapter({
+        const timeoutAdapter = createDeepSeekAdapter({
           apiKey: "server-secret",
           timeoutMs: 5,
           fetchImpl: (_input, init) => {
-            calls += 1;
-            return new Promise((_, reject) => init.signal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")), { once: true }));
+calls += 1;
+return new Promise((_, reject) => init.signal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")), { once: true }));
           },
         });
         await assert.rejects(
@@ -1484,12 +1470,12 @@ export const AI_CASES = [
 
         let callerSignal;
         const caller = new AbortController();
-        const callerAdapter = createOpenRouterAdapter({
+        const callerAdapter = createDeepSeekAdapter({
           apiKey: "server-secret",
           timeoutMs: 1000,
           fetchImpl: (_input, init) => {
-            callerSignal = init.signal;
-            return new Promise((_, reject) => init.signal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")), { once: true }));
+callerSignal = init.signal;
+return new Promise((_, reject) => init.signal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")), { once: true }));
           },
         });
          const pending = callerAdapter.complete({ systemInstruction: "trusted", userContent: "source", reasoningEffort: "low", completionBudget: 2048 }, { signal: caller.signal });
@@ -1509,38 +1495,38 @@ export const AI_CASES = [
     run: () => {
       runAdapterScript(`
          const assert = require("node:assert/strict");
-         const { createOpenRouterAdapter } = require("./src/server/ai/openrouter-adapter");
+         const { createDeepSeekAdapter } = require("./src/server/ai/deepseek-adapter");
          const { AiCancellationError, publicAiError } = require("./src/server/ai/errors");
 
          const caller = new AbortController();
          caller.abort();
          let calls = 0;
-         const adapter = createOpenRouterAdapter({
+         const adapter = createDeepSeekAdapter({
            apiKey: "server-secret",
            timeoutMs: 1,
            fetchImpl: async () => {
-             calls += 1;
-             throw new Error("fetch must not run");
+calls += 1;
+throw new Error("fetch must not run");
            },
          });
 
          await assert.rejects(
            adapter.complete({
-             systemInstruction: "trusted",
-             userContent: "source",
-             reasoningEffort: "low",
-             completionBudget: 2048,
+systemInstruction: "trusted",
+userContent: "source",
+reasoningEffort: "low",
+completionBudget: 2048,
            }, { signal: caller.signal }),
            (error) => {
-             assert.equal(error instanceof AiCancellationError, true);
-             assert.equal(error.code, "internal_error");
-             assert.equal(error.retryable, false);
-             assert.deepEqual(publicAiError(error), {
-               code: "internal_error",
-               message: "The AI request was cancelled.",
-               retryable: false,
-             });
-             return true;
+assert.equal(error instanceof AiCancellationError, true);
+assert.equal(error.code, "internal_error");
+assert.equal(error.retryable, false);
+assert.deepEqual(publicAiError(error), {
+  code: "internal_error",
+  message: "The AI request was cancelled.",
+  retryable: false,
+});
+return true;
            },
          );
          assert.equal(calls, 0);
@@ -1552,32 +1538,32 @@ export const AI_CASES = [
     run: () => {
       runAdapterScript(`
          const assert = require("node:assert/strict");
-         const { createOpenRouterAdapter } = require("./src/server/ai/openrouter-adapter");
+         const { createDeepSeekAdapter } = require("./src/server/ai/deepseek-adapter");
 
          let cancelled = false;
          let requestSignal;
          const chunk = new TextEncoder().encode("x".repeat(32 * 1024));
          const body = new ReadableStream({
            start(controller) {
-             controller.enqueue(chunk);
-             controller.enqueue(new Uint8Array([...chunk, 120]));
+controller.enqueue(chunk);
+controller.enqueue(new Uint8Array([...chunk, 120]));
            },
            cancel() {
-             cancelled = true;
+cancelled = true;
            },
          });
-         const adapter = createOpenRouterAdapter({
+         const adapter = createDeepSeekAdapter({
            apiKey: "server-secret",
            fetchImpl: async (_input, init) => {
-             requestSignal = init.signal;
-             const response = new Response(body, { status: 200 });
-             assert.equal(response.headers.get("content-length"), null);
-             return response;
+requestSignal = init.signal;
+const response = new Response(body, { status: 200 });
+assert.equal(response.headers.get("content-length"), null);
+return response;
            },
          });
 
          await assert.rejects(
-            adapter.complete({ systemInstruction: "trusted", userContent: "source", reasoningEffort: "low", completionBudget: 2048 }, { signal: new AbortController().signal }),
+adapter.complete({ systemInstruction: "trusted", userContent: "source", reasoningEffort: "low", completionBudget: 2048 }, { signal: new AbortController().signal }),
            (error) => error.code === "output_too_large",
          );
          assert.equal(cancelled, true);
@@ -1590,21 +1576,21 @@ export const AI_CASES = [
     run: () => {
       runAdapterScript(`
          const assert = require("node:assert/strict");
-         const { createOpenRouterAdapter } = require("./src/server/ai/openrouter-adapter");
+         const { createDeepSeekAdapter } = require("./src/server/ai/deepseek-adapter");
 
          const payload = JSON.stringify({
-           model: "stealth/ox-alpha",
+           model: "deepseek-v4-flash",
            choices: [{ finish_reason: "stop", message: { content: "{\\"sections\\":[]}" } }],
-           usage: { cost: 0 },
+           usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
          });
          for (const status of [201, 202]) {
-           const adapter = createOpenRouterAdapter({
-             apiKey: "server-secret",
-             fetchImpl: async () => new Response(payload, { status }),
+           const adapter = createDeepSeekAdapter({
+apiKey: "server-secret",
+fetchImpl: async () => new Response(payload, { status }),
            });
            await assert.rejects(
-            adapter.complete({ systemInstruction: "trusted", userContent: "source", reasoningEffort: "low", completionBudget: 2048 }, { signal: new AbortController().signal }),
-             (error) => error.code === "invalid_provider_response" && error.status === status,
+adapter.complete({ systemInstruction: "trusted", userContent: "source", reasoningEffort: "low", completionBudget: 2048 }, { signal: new AbortController().signal }),
+(error) => error.code === "invalid_provider_response" && error.status === status,
            );
          }
        `);
@@ -1615,34 +1601,34 @@ export const AI_CASES = [
     run: () => {
       runAdapterScript(`
          const assert = require("node:assert/strict");
-         const { createOpenRouterAdapter } = require("./src/server/ai/openrouter-adapter");
+         const { createDeepSeekAdapter } = require("./src/server/ai/deepseek-adapter");
 
          for (const content of ["not-json", "1", "null", "[]", "\\"text\\""]) {
-           const adapter = createOpenRouterAdapter({
-             apiKey: "server-secret",
-             fetchImpl: async () => new Response(JSON.stringify({
-               model: "stealth/ox-alpha",
-               choices: [{ finish_reason: "stop", message: { content } }],
-               usage: { cost: 0 },
-             }), { status: 200 }),
+           const adapter = createDeepSeekAdapter({
+apiKey: "server-secret",
+fetchImpl: async () => new Response(JSON.stringify({
+  model: "deepseek-v4-flash",
+  choices: [{ finish_reason: "stop", message: { content } }],
+  usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+}), { status: 200 }),
            });
            await assert.rejects(
-            adapter.complete({ systemInstruction: "trusted", userContent: "source", reasoningEffort: "low", completionBudget: 2048 }, { signal: new AbortController().signal }),
-             (error) => error.code === "invalid_provider_response",
-             content,
+adapter.complete({ systemInstruction: "trusted", userContent: "source", reasoningEffort: "low", completionBudget: 2048 }, { signal: new AbortController().signal }),
+(error) => error.code === "invalid_provider_response",
+content,
            );
          }
 
-         const valid = createOpenRouterAdapter({
+         const valid = createDeepSeekAdapter({
            apiKey: "server-secret",
            fetchImpl: async () => new Response(JSON.stringify({
-             model: "stealth/ox-alpha",
-             choices: [{ finish_reason: "stop", message: { content: "{\\"sections\\":[]}" } }],
-             usage: { cost: 0 },
+model: "deepseek-v4-flash",
+choices: [{ finish_reason: "stop", message: { content: "{\\"sections\\":[]}" } }],
+usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
            }), { status: 200 }),
          });
          assert.equal(
-            await valid.complete({ systemInstruction: "trusted", userContent: "source", reasoningEffort: "low", completionBudget: 2048 }, { signal: new AbortController().signal }),
+await valid.complete({ systemInstruction: "trusted", userContent: "source", reasoningEffort: "low", completionBudget: 2048 }, { signal: new AbortController().signal }),
            "{\\"sections\\":[]}",
          );
        `);
@@ -1653,20 +1639,20 @@ export const AI_CASES = [
     run: () => {
       runAdapterScript(`
          const assert = require("node:assert/strict");
-         const { createOpenRouterAdapter } = require("./src/server/ai/openrouter-adapter");
+         const { createDeepSeekAdapter } = require("./src/server/ai/deepseek-adapter");
 
          for (const [status, expectedCode] of [[408, "provider_timeout"], [504, "provider_timeout"], [524, "provider_timeout"], [500, "provider_unavailable"], [503, "provider_unavailable"], [599, "provider_unavailable"]]) {
-           const adapter = createOpenRouterAdapter({
-             apiKey: "server-secret",
-             fetchImpl: async () => new Response(JSON.stringify({ error: { message: "safe" } }), {
-               status,
-               headers: { "Retry-After": "999999" },
-             }),
+           const adapter = createDeepSeekAdapter({
+apiKey: "server-secret",
+fetchImpl: async () => new Response(JSON.stringify({ error: { message: "safe" } }), {
+  status,
+  headers: { "Retry-After": "999999" },
+}),
            });
            await assert.rejects(
-            adapter.complete({ systemInstruction: "trusted", userContent: "source", reasoningEffort: "low", completionBudget: 2048 }, { signal: new AbortController().signal }),
-             (error) => error.code === expectedCode && error.retryable === true && error.retryAfterSeconds === 3600,
-             String(status),
+adapter.complete({ systemInstruction: "trusted", userContent: "source", reasoningEffort: "low", completionBudget: 2048 }, { signal: new AbortController().signal }),
+(error) => error.code === expectedCode && error.retryable === true && error.retryAfterSeconds === 3600,
+String(status),
            );
          }
        `);
@@ -1677,41 +1663,41 @@ export const AI_CASES = [
     run: () => {
       runAdapterScript(`
           const assert = require("node:assert/strict");
-          const { createOpenRouterAdapter } = require("./src/server/ai/openrouter-adapter");
+          const { createDeepSeekAdapter } = require("./src/server/ai/deepseek-adapter");
 
           for (const status of [301, 302, 307, 308]) {
-            const calls = [];
-            const fakeFetch = async (input, init) => {
-              calls.push({ input, init });
-              if (calls.length === 1 && init.redirect !== "error") {
-                return fakeFetch("https://attacker.example/replay", init);
-              }
-              if (calls.length > 1) {
-                assert.equal(init.headers.Authorization, undefined, "redirect replay carried Authorization");
-                assert.equal(JSON.parse(init.body).messages[1].content, undefined, "redirect replay carried prompt");
-              }
-              return new Response(null, {
-                status,
-                headers: { Location: "https://attacker.example/replay" },
-              });
-            };
-            const adapter = createOpenRouterAdapter({ apiKey: "server-secret", fetchImpl: fakeFetch });
+const calls = [];
+const fakeFetch = async (input, init) => {
+ calls.push({ input, init });
+ if (calls.length === 1 && init.redirect !== "error") {
+   return fakeFetch("https://attacker.example/replay", init);
+ }
+ if (calls.length > 1) {
+   assert.equal(init.headers.Authorization, undefined, "redirect replay carried Authorization");
+   assert.equal(JSON.parse(init.body).messages[1].content, undefined, "redirect replay carried prompt");
+ }
+ return new Response(null, {
+   status,
+   headers: { Location: "https://attacker.example/replay" },
+ });
+};
+const adapter = createDeepSeekAdapter({ apiKey: "server-secret", fetchImpl: fakeFetch });
 
-            await assert.rejects(
-              adapter.complete({
-                systemInstruction: "trusted instruction",
-                userContent: "private prompt",
-                reasoningEffort: "low",
-                 completionBudget: 2048,
-              }, { signal: new AbortController().signal }),
-              (error) => error.code === "provider_unavailable" && error.status === status,
-              String(status),
-            );
-            assert.equal(calls.length, 1, "status " + status + " caused a redirect replay");
-            assert.equal(calls[0].input, "https://openrouter.ai/api/v1/chat/completions");
-            assert.equal(calls[0].init.redirect, "error");
-            assert.equal(calls[0].init.headers.Authorization, "Bearer server-secret");
-            assert.equal(JSON.parse(calls[0].init.body).messages[1].content, "private prompt");
+await assert.rejects(
+ adapter.complete({
+   systemInstruction: "trusted instruction",
+   userContent: "private prompt",
+   reasoningEffort: "low",
+    completionBudget: 2048,
+ }, { signal: new AbortController().signal }),
+ (error) => error.code === "provider_unavailable" && error.status === status,
+ String(status),
+);
+assert.equal(calls.length, 1, "status " + status + " caused a redirect replay");
+assert.equal(calls[0].input, "https://api.deepseek.com/chat/completions");
+assert.equal(calls[0].init.redirect, "error");
+assert.equal(calls[0].init.headers.Authorization, "Bearer server-secret");
+assert.equal(JSON.parse(calls[0].init.body).messages[1].content, "private prompt");
           }
        `);
     },
@@ -1721,7 +1707,7 @@ export const AI_CASES = [
     run: () => {
       runAdapterScript(`
           const assert = require("node:assert/strict");
-          const { createOpenRouterAdapter } = require("./src/server/ai/openrouter-adapter");
+          const { createDeepSeekAdapter } = require("./src/server/ai/deepseek-adapter");
 
           let requestSignal;
           let cancelStarted = false;
@@ -1729,40 +1715,40 @@ export const AI_CASES = [
           const chunk = new TextEncoder().encode("x".repeat(64 * 1024));
           let reads = 0;
           const body = {
-            getReader() {
-              return {
-                async read() {
-                  reads += 1;
-                  return reads === 1 ? { done: false, value: chunk } : { done: false, value: new Uint8Array([120]) };
-                },
-                cancel() {
-                  cancelStarted = true;
-                  abortedWhenCancelStarted = requestSignal.aborted;
-                  return new Promise(() => {});
-                },
-                releaseLock() {},
-              };
-            },
+getReader() {
+ return {
+   async read() {
+     reads += 1;
+     return reads === 1 ? { done: false, value: chunk } : { done: false, value: new Uint8Array([120]) };
+   },
+   cancel() {
+     cancelStarted = true;
+     abortedWhenCancelStarted = requestSignal.aborted;
+     return new Promise(() => {});
+   },
+   releaseLock() {},
+ };
+},
           };
-          const adapter = createOpenRouterAdapter({
-            apiKey: "server-secret",
-            fetchImpl: async (_input, init) => {
-              requestSignal = init.signal;
-              return { status: 200, headers: new Headers(), body };
-            },
+          const adapter = createDeepSeekAdapter({
+apiKey: "server-secret",
+fetchImpl: async (_input, init) => {
+ requestSignal = init.signal;
+ return { status: 200, headers: new Headers(), body };
+},
           });
 
           const outcome = await Promise.race([
-            adapter.complete({
-              systemInstruction: "trusted",
-              userContent: "source",
-              reasoningEffort: "low",
-              completionBudget: 2048,
-            }, { signal: new AbortController().signal }).then(
-              () => "resolved",
-              (error) => error,
-            ),
-            new Promise((resolve) => setTimeout(() => resolve("timed-out"), 50)),
+adapter.complete({
+ systemInstruction: "trusted",
+ userContent: "source",
+ reasoningEffort: "low",
+ completionBudget: 2048,
+}, { signal: new AbortController().signal }).then(
+ () => "resolved",
+ (error) => error,
+),
+new Promise((resolve) => setTimeout(() => resolve("timed-out"), 50)),
           ]);
           assert.notEqual(outcome, "timed-out", "complete awaited an unbounded reader cancellation");
           assert.equal(outcome.code, "output_too_large");
@@ -1777,36 +1763,36 @@ export const AI_CASES = [
     run: () => {
       runAdapterScript(`
           const assert = require("node:assert/strict");
-          const { createOpenRouterAdapter } = require("./src/server/ai/openrouter-adapter");
+          const { createDeepSeekAdapter } = require("./src/server/ai/deepseek-adapter");
 
           for (const [status, expectedCode, retryAfterSeconds] of [
-            [429, "provider_rate_limited", 17],
-            [503, "provider_unavailable", 23],
+[429, "provider_rate_limited", 17],
+[503, "provider_unavailable", 23],
           ]) {
-            const adapter = createOpenRouterAdapter({
-              apiKey: "server-secret",
-              fetchImpl: async () => new Response("provider-secret ".repeat(8 * 1024), {
-                status,
-                headers: { "Retry-After": String(retryAfterSeconds) },
-              }),
-            });
-            await assert.rejects(
-              adapter.complete({
-                systemInstruction: "trusted",
-                userContent: "source",
-                reasoningEffort: "low",
-                completionBudget: 2048,
-              }, { signal: new AbortController().signal }),
-              (error) => {
-                assert.equal(error.code, expectedCode);
-                assert.equal(error.status, status);
-                assert.equal(error.retryable, true);
-                assert.equal(error.retryAfterSeconds, retryAfterSeconds);
-                assert.equal(error.message.includes("provider-secret"), false);
-                return true;
-              },
-              String(status),
-            );
+const adapter = createDeepSeekAdapter({
+ apiKey: "server-secret",
+ fetchImpl: async () => new Response("provider-secret ".repeat(8 * 1024), {
+   status,
+   headers: { "Retry-After": String(retryAfterSeconds) },
+ }),
+});
+await assert.rejects(
+ adapter.complete({
+   systemInstruction: "trusted",
+   userContent: "source",
+   reasoningEffort: "low",
+   completionBudget: 2048,
+ }, { signal: new AbortController().signal }),
+ (error) => {
+   assert.equal(error.code, expectedCode);
+   assert.equal(error.status, status);
+   assert.equal(error.retryable, true);
+   assert.equal(error.retryAfterSeconds, retryAfterSeconds);
+   assert.equal(error.message.includes("provider-secret"), false);
+   return true;
+ },
+ String(status),
+);
           }
        `);
     },
@@ -1816,42 +1802,41 @@ export const AI_CASES = [
     run: () => {
       runAdapterScript(`
           const assert = require("node:assert/strict");
-          const { createOpenRouterAdapter } = require("./src/server/ai/openrouter-adapter");
+          const { createDeepSeekAdapter } = require("./src/server/ai/deepseek-adapter");
           const { publicAiError } = require("./src/server/ai/errors");
 
           const cases = [
-            [401, { code: "upstream_auth_secret", message: "provider auth secret" }],
-            [403, { code: "upstream_permission_secret", message: "provider permission secret" }],
-            [400, { code: "invalid_api_key", message: "provider auth secret" }],
-            [429, { code: "permission_denied", message: "provider permission secret" }],
-            [500, { code: "expired_api_key", message: "provider auth secret" }],
+[401, { code: "upstream_auth_secret", message: "provider auth secret" }],
+[403, { code: "upstream_permission_secret", message: "provider permission secret" }],
+[400, { code: "invalid_api_key", message: "provider auth secret" }],
+[500, { code: "expired_api_key", message: "provider auth secret" }],
           ];
           for (const [status, providerError] of cases) {
-            const adapter = createOpenRouterAdapter({
-              apiKey: "server-secret",
-              fetchImpl: async () => new Response(JSON.stringify({ error: providerError }), { status }),
-            });
-            await assert.rejects(
-              adapter.complete({
-                systemInstruction: "trusted",
-                userContent: "source",
-                reasoningEffort: "low",
-                 completionBudget: 2048,
-              }, { signal: new AbortController().signal }),
-              (error) => {
-                assert.equal(error.code, "provider_unavailable");
-                assert.equal(error.retryable, false);
-                assert.equal(error.status, status);
-                assert.equal(error.message, "The AI provider is currently unavailable.");
-                assert.deepEqual(publicAiError(error), {
-                  code: "provider_unavailable",
-                  message: "The AI provider is currently unavailable.",
-                  retryable: false,
-                });
-                return true;
-              },
-              String(status),
-            );
+const adapter = createDeepSeekAdapter({
+ apiKey: "server-secret",
+ fetchImpl: async () => new Response(JSON.stringify({ error: providerError }), { status }),
+});
+await assert.rejects(
+ adapter.complete({
+   systemInstruction: "trusted",
+   userContent: "source",
+   reasoningEffort: "low",
+    completionBudget: 2048,
+ }, { signal: new AbortController().signal }),
+ (error) => {
+   assert.equal(error.code, status === 429 ? "provider_rate_limited" : "provider_unavailable");
+   assert.equal(error.retryable, false);
+   assert.equal(error.status, status);
+   assert.equal(error.message, "The AI provider is currently unavailable.");
+   assert.deepEqual(publicAiError(error), {
+     code: "provider_unavailable",
+     message: "The AI provider is currently unavailable.",
+     retryable: false,
+   });
+   return true;
+ },
+ String(status),
+);
           }
       `);
     },
@@ -1867,8 +1852,8 @@ export const AI_CASES = [
         const removals = [];
         const redis = {
           eval: async (script, keys, args) => {
-            calls.push({ script, keys, args });
-            return ["admitted", "lease-1", LEASE_TTL_MS, 2, 1];
+calls.push({ script, keys, args });
+return ["admitted", "lease-1", LEASE_TTL_MS, 2, 1];
           },
           zrem: async (key, member) => removals.push({ key, member }),
         };
@@ -1903,15 +1888,15 @@ export const AI_CASES = [
         const leases = new Map();
         const redis = {
           eval: async (_script, _keys, args) => {
-            const current = Number(args[0]);
-            for (const [id, expiry] of leases) if (expiry <= current) leases.delete(id);
-            if (leases.size >= CONCURRENCY_LIMIT) {
-              const retryAt = Math.min(...leases.values());
-              return ["busy", "", Math.max(1, retryAt - current), 0, leases.size];
-            }
-            const id = args[1];
-            leases.set(id, current + LEASE_TTL_MS);
-            return ["admitted", id, LEASE_TTL_MS, 0, leases.size];
+const current = Number(args[0]);
+for (const [id, expiry] of leases) if (expiry <= current) leases.delete(id);
+if (leases.size >= CONCURRENCY_LIMIT) {
+ const retryAt = Math.min(...leases.values());
+ return ["busy", "", Math.max(1, retryAt - current), 0, leases.size];
+}
+const id = args[1];
+leases.set(id, current + LEASE_TTL_MS);
+return ["admitted", id, LEASE_TTL_MS, 0, leases.size];
           },
           zrem: async (_key, id) => leases.delete(id),
         };
@@ -1954,11 +1939,11 @@ export const AI_CASES = [
         });
         await assert.rejects(
           orchestrator.enhance({
-            version: 1,
-            prompt: "fix the login flow",
-            selection: { kind: "manual", taskType: "bug-fix" },
-            level: "standard",
-            sections: ["objective", "requirements", "verification"],
+version: 1,
+prompt: "fix the login flow",
+selection: { kind: "manual", taskType: "bug-fix" },
+level: "standard",
+sections: ["objective", "requirements", "verification"],
           }, { signal: new AbortController().signal }),
           (error) => error.code === "service_unavailable" && error.retryable === true,
         );
@@ -2030,8 +2015,8 @@ export const AI_CASES = [
         const admission = createAdmission({
           operationTimeoutMs: 10,
           redis: {
-            eval: async () => new Promise(() => {}),
-            zrem: async () => new Promise(() => {}),
+eval: async () => new Promise(() => {}),
+zrem: async () => new Promise(() => {}),
           },
           uuid: () => "lease-hanging",
         });
@@ -2061,24 +2046,24 @@ export const AI_CASES = [
         const released = [];
         const orchestrator = createOrchestrator({
           admission: {
-            acquire: async () => ({ status: "admitted", leaseId: "lease-1", expiresAt: 91_000, retryAfterMs: 0, retryAfterSeconds: 0, activeCount: 1, prunedCount: 0 }),
-            release: async (leaseId) => released.push(leaseId),
+acquire: async () => ({ status: "admitted", leaseId: "lease-1", expiresAt: 91_000, retryAfterMs: 0, retryAfterSeconds: 0, activeCount: 1, prunedCount: 0 }),
+release: async (leaseId) => released.push(leaseId),
           },
           model: {
-            complete: async (input) => {
-              calls.push(input);
-              throw new Error("raw provider secret");
-            },
+complete: async (input) => {
+ calls.push(input);
+ throw new Error("raw provider secret");
+},
           },
           requestId: () => "req-interrupted",
         });
         await assert.rejects(
           orchestrator.enhance({
-            version: 1,
-            prompt: "private prompt",
-            selection: { kind: "manual", taskType: "bug-fix" },
-            level: "standard",
-            sections: ["objective", "requirements", "verification"],
+version: 1,
+prompt: "private prompt",
+selection: { kind: "manual", taskType: "bug-fix" },
+level: "standard",
+sections: ["objective", "requirements", "verification"],
            }, { signal: new AbortController().signal }),
           (error) => error.code === "provider_unavailable",
         );
@@ -2105,20 +2090,20 @@ export const AI_CASES = [
          const oversized = new TextEncoder().encode(JSON.stringify({ version: 1, prompt: "x".repeat(135_000) }));
         for (const contentLength of [undefined, "1"]) {
           const headers = {
-            Origin: "https://ichicorito.github.io",
-            "Content-Type": "application/json",
-            ...(contentLength === undefined ? {} : { "Content-Length": contentLength }),
+Origin: "https://ichicorito.github.io",
+"Content-Type": "application/json",
+...(contentLength === undefined ? {} : { "Content-Length": contentLength }),
           };
           const request = new Request("https://api.example/enhance", {
-            method: "POST",
-            headers,
-            body: new ReadableStream({
-              start(controller) {
-                for (let offset = 0; offset < oversized.byteLength; offset += 1_024) controller.enqueue(oversized.slice(offset, offset + 1_024));
-                controller.close();
-              },
-            }),
-            duplex: "half",
+method: "POST",
+headers,
+body: new ReadableStream({
+ start(controller) {
+   for (let offset = 0; offset < oversized.byteLength; offset += 1_024) controller.enqueue(oversized.slice(offset, offset + 1_024));
+   controller.close();
+ },
+}),
+duplex: "half",
           });
           const response = await handler(request);
           const payload = await response.json();
@@ -2170,30 +2155,29 @@ export const AI_CASES = [
           requestId: () => "unsafe request id secret",
           log: (event) => events.push(event),
           orchestrator: {
-             enhance: async (request, context) => {
-               seen = { request, context };
-               context.onCompletionMetadata?.({
-                 provider: "openrouter",
-                 model: "stealth/ox-alpha",
-                 generationId: "gen-safe-id",
-                 inputTokens: 12,
-                 outputTokens: 34,
-                 totalTokens: 46,
-                 cost: 0,
-               });
-              return {
-                version: 1,
-                ok: true,
-                requestId: "backend-id",
-                result: {
-                  analysis: { original: request.prompt, category: "development", taskType: "bug-fix", confidence: 90, technologies: [], constraints: [], requirements: [], enhancementLevel: "standard" },
-                  classification: { taskType: "bug-fix", category: "development", confidence: 90, band: "high", scores: Object.fromEntries(["bug-fix", "feature", "code-review", "refactor", "testing", "documentation", "rewrite", "summarize", "research", "comparison", "ui-review", "image-prompt", "general"].map((key) => [key, key === "bug-fix" ? 1 : 0])), fallbackToGeneral: false, topMatches: ["bug-fix"] },
-                  resolved: { presetId: null, taskType: "bug-fix", category: "development", level: "standard", sections: ["objective"], reasoningEffort: "high" },
-                  markdown: "# Objective\\n\\nSafe output",
-                  generation: { kind: "ai", provider: "openrouter", model: "stealth/ox-alpha" },
-                },
-              };
-            },
+enhance: async (request, context) => {
+  seen = { request, context };
+  context.onCompletionMetadata?.({
+    provider: "deepseek",
+    model: "deepseek-v4-flash",
+    generationId: "gen-safe-id",
+    inputTokens: 12,
+    outputTokens: 34,
+    totalTokens: 46,
+     });
+ return {
+   version: 1,
+   ok: true,
+   requestId: "backend-id",
+   result: {
+     analysis: { original: request.prompt, category: "development", taskType: "bug-fix", confidence: 90, technologies: [], constraints: [], requirements: [], enhancementLevel: "standard" },
+     classification: { taskType: "bug-fix", category: "development", confidence: 90, band: "high", scores: Object.fromEntries(["bug-fix", "feature", "code-review", "refactor", "testing", "documentation", "rewrite", "summarize", "research", "comparison", "ui-review", "image-prompt", "general"].map((key) => [key, key === "bug-fix" ? 1 : 0])), fallbackToGeneral: false, topMatches: ["bug-fix"] },
+     resolved: { presetId: null, taskType: "bug-fix", category: "development", level: "standard", sections: ["objective"], reasoningEffort: "high" },
+     markdown: "# Objective\\n\\nSafe output",
+     generation: { kind: "ai", provider: "deepseek", model: "deepseek-v4-flash" },
+   },
+ };
+},
           },
         });
         const caller = new AbortController();
@@ -2211,8 +2195,7 @@ export const AI_CASES = [
         assert.equal(seen.context.signal, caller.signal);
         assert.equal(JSON.stringify(events).includes("prompt secret"), false);
         assert.equal(JSON.stringify(events).includes("Safe output"), false);
-        assert.equal(events[0].cost, 0);
-         assert.equal(events[0].code, "success");
+    assert.equal(events[0].code, "success");
          assert.equal(events[0].generationId, "gen-safe-id");
          assert.equal(events[0].inputTokens, 12);
          assert.equal(events[0].outputTokens, 34);
@@ -2274,8 +2257,8 @@ export const AI_CASES = [
            [new AdmissionUnavailableError(), 503],
         ]) {
           const handler = createAiHttpHandler({
-            requestId: () => "req-status",
-            orchestrator: { enhance: async () => { throw error; } },
+requestId: () => "req-status",
+orchestrator: { enhance: async () => { throw error; } },
           });
           const response = await handler(makeRequest());
           const payload = await response.json();
@@ -2290,7 +2273,7 @@ export const AI_CASES = [
     },
   },
   {
-    name: "browser client sends only the versioned request and omits credentials",
+    name: "browser client sends only the versioned request without credentials",
     run: async () => {
       const calls: Array<{ input: RequestInfo | URL; init: RequestInit | undefined }> = [];
       const fakeFetch: typeof fetch = async (input, init) => {
@@ -2471,7 +2454,7 @@ export const AI_CASES = [
       assert.equal(response.result.analysis.original, "fix the login flow");
       assert.deepEqual(response.result.resolved.sections, ["objective", "requirements", "verification"]);
       assert.equal(response.result.markdown.length > 0, true);
-      assert.equal(JSON.stringify(response).includes("openrouter"), false);
+      assert.equal(JSON.stringify(response).includes("deepseek"), false);
     },
   },
   {
@@ -2507,11 +2490,11 @@ export const AI_CASES = [
     run: async () => {
       const previous = {
         AI_ENHANCEMENT_ENABLED: process.env.AI_ENHANCEMENT_ENABLED,
-        OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+        DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY,
         ALLOWED_ORIGIN: process.env.ALLOWED_ORIGIN,
       };
       process.env.AI_ENHANCEMENT_ENABLED = "false";
-      delete process.env.OPENROUTER_API_KEY;
+      delete process.env.DEEPSEEK_API_KEY;
       process.env.ALLOWED_ORIGIN = "https://test.example";
 
       try {
@@ -2528,8 +2511,8 @@ export const AI_CASES = [
       } finally {
         if (previous.AI_ENHANCEMENT_ENABLED === undefined) delete process.env.AI_ENHANCEMENT_ENABLED;
         else process.env.AI_ENHANCEMENT_ENABLED = previous.AI_ENHANCEMENT_ENABLED;
-        if (previous.OPENROUTER_API_KEY === undefined) delete process.env.OPENROUTER_API_KEY;
-        else process.env.OPENROUTER_API_KEY = previous.OPENROUTER_API_KEY;
+        if (previous.DEEPSEEK_API_KEY === undefined) delete process.env.DEEPSEEK_API_KEY;
+        else process.env.DEEPSEEK_API_KEY = previous.DEEPSEEK_API_KEY;
         if (previous.ALLOWED_ORIGIN === undefined) delete process.env.ALLOWED_ORIGIN;
         else process.env.ALLOWED_ORIGIN = previous.ALLOWED_ORIGIN;
       }
@@ -2605,7 +2588,7 @@ export const AI_CASES = [
       assert.deepEqual(result.result.analysis, engine.analysis);
       assert.deepEqual(result.result.classification, engine.classification);
       assert.deepEqual(result.result.resolved.sections, ["objective", "requirements"]);
-      assert.deepEqual(result.result.generation, { kind: "ai", provider: "openrouter", model: OPENROUTER_MODEL });
+      assert.deepEqual(result.result.generation, { kind: "ai", provider: "deepseek", model: DEEPSEEK_MODEL });
       assert.equal(result.ok, true);
       assert.match(
         result.result.markdown,

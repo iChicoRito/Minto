@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { createAiHttpHandler } from "../server/ai/http-handler";
-import type { ModelAdapter } from "../server/ai/openrouter-adapter";
+import type { ModelAdapter } from "../server/ai/model-adapter";
 import { performance } from "node:perf_hooks";
 
 // Reports end-to-end enhancement handler latency with the provider and the
@@ -60,7 +60,7 @@ const benchAdmission = {
 const handler = createAiHttpHandler({
   environment: {
     AI_ENHANCEMENT_ENABLED: "true",
-    OPENROUTER_API_KEY: "bench-key",
+    DEEPSEEK_API_KEY: "bench-key",
     ALLOWED_ORIGIN: ORIGIN,
   },
   model: benchModel,

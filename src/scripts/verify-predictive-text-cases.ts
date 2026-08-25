@@ -572,6 +572,6 @@ function validEnhancementResult(): EnhancementResultV1 {
       reasoningEffort: "high",
     },
     markdown: "# Objective\n\nFix the login flow.",
-    generation: { kind: "ai", provider: "openrouter", model: "stealth/ox-alpha" },
+    generation: { kind: "ai", provider: "deepseek", model: "deepseek-v4-flash" },
   };
 }

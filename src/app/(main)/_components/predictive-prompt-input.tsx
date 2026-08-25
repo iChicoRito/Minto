@@ -14,6 +14,7 @@ export type PredictivePromptInputProps = {
   history: readonly PredictiveHistoryEntry[];
   historyResolved: boolean;
   predictionService: PredictiveTextService | null;
+  predictiveEnabled: boolean;
   onValueChange: (value: string) => void;
   onSubmit: () => void;
 };
@@ -28,6 +29,7 @@ export function PredictivePromptInput({
   history,
   historyResolved,
   predictionService,
+  predictiveEnabled,
   onValueChange,
   onSubmit,
 }: PredictivePromptInputProps) {
@@ -59,7 +61,7 @@ export function PredictivePromptInput({
     selectionEnd === value.length;
   const { suggestion, pending, dismiss } = usePredictiveSuggestion({
     input: value,
-    eligible,
+    eligible: eligible && predictiveEnabled,
     history,
     historyResolved,
     service: predictionService,

@@ -18,18 +18,6 @@ export const FALLBACK_ELIGIBLE_CODES = new Set([
   "invalid_response",
 ]);
 
-/**
- * The only usage-limit signal the client receives is the provider's
- * rate-limit rejection, which for the zero-cost route means the hourly
- * allowance is exhausted. Surfaced with plain wording only: never show quota
- * figures, retry timers, status codes, or provider details.
- */
-export const HOURLY_LIMIT_MESSAGE = "You've reached your enhancement limit for this hour. Please try again later.";
-
-export function isHourlyLimitReached(code: string | undefined): boolean {
-  return code === "provider_rate_limited";
-}
-
 export function enhancementErrorCode(error: unknown): string | undefined {
   return error instanceof AiEnhancementClientError ? error.code : undefined;
 }
@@ -61,14 +49,14 @@ export function describeCode(code: string): string {
     case "timeout":
       return "The enhancement service timed out. Please try again.";
     case "provider_rate_limited":
-      return HOURLY_LIMIT_MESSAGE;
+      return "The enhancement service is rate limited. Please try again later.";
     case "provider_unavailable":
     case "network":
       return "The enhancement service could not be reached.";
     case "model_unavailable":
       return "The enhancement service is currently unavailable.";
     case "priced_route_unavailable":
-      return "The free enhancement route is currently unavailable.";
+      return "The enhancement request was rejected. Please try again later.";
     case "provider_refused":
       return "The request was rejected. Please adjust the prompt and try again.";
     case "invalid_provider_response":

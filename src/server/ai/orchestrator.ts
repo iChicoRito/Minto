@@ -1,15 +1,15 @@
 import {
+  DEEPSEEK_MODEL,
   ENHANCEMENT_API_VERSION,
   type EnhancementRequestV1,
   type EnhancementSuccessV1,
   MAX_NORMALIZED_MARKDOWN_CHARACTERS,
-  OPENROUTER_MODEL,
 } from "../../lib/ai-enhancement/contracts";
 import { enhancePrompt } from "../../prompt-engine";
 import { type Admission, AdmissionBusyError, AdmissionUnavailableError } from "./admission";
 import { AiInputError, isAiCancellationError, isAiConfigurationError, isAiProviderError } from "./errors";
+import type { ModelAdapter, ModelCompletionMetadata } from "./model-adapter";
 import { isModelOutputTooLargeError, parseModelDocument, renderGeneratedMarkdown } from "./model-output";
-import type { ModelAdapter, ModelCompletionMetadata } from "./openrouter-adapter";
 import { type ResolvedEnhancementPolicy, resolveTrustedPolicy } from "./policy-resolver";
 
 export type OrchestrationContext = {
@@ -143,7 +143,7 @@ export function createOrchestrator(dependencies: OrchestratorDependencies): Enha
                 reasoningEffort: "low",
               },
               markdown: plain,
-              generation: { kind: "ai", provider: "openrouter", model: OPENROUTER_MODEL },
+              generation: { kind: "ai", provider: "deepseek", model: DEEPSEEK_MODEL },
             },
           };
         } catch (error) {
@@ -214,7 +214,7 @@ export function createOrchestrator(dependencies: OrchestratorDependencies): Enha
               reasoningEffort: policy.reasoningEffort,
             },
             markdown,
-            generation: { kind: "ai", provider: "openrouter", model: OPENROUTER_MODEL },
+            generation: { kind: "ai", provider: "deepseek", model: DEEPSEEK_MODEL },
           },
         };
       } finally {

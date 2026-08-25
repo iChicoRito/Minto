@@ -9,7 +9,7 @@ import {
 } from "../../lib/predictive-text/contracts";
 import { type Admission, AdmissionBusyError, AdmissionUnavailableError } from "./admission";
 import { AiInputError, isAiCancellationError, isAiConfigurationError, isAiProviderError } from "./errors";
-import type { ModelAdapter, ModelCompletionMetadata } from "./openrouter-adapter";
+import type { ModelAdapter, ModelCompletionMetadata } from "./model-adapter";
 import { AiOrchestrationError } from "./orchestrator";
 
 export type PredictiveTextOrchestratorDependencies = {

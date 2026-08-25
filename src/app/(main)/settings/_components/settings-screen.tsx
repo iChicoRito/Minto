@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useRef, useState } from "react";
 
@@ -23,7 +23,6 @@ import {
   HISTORY_LIMIT_OPTIONS,
   type HistoryLimit,
   PROMPT_SECTION_IDS,
-  PROMPT_TYPE_OPTIONS,
   type PromptPreferenceSectionId,
   serializePromptSections,
 } from "@/lib/preferences/prompt-preferences";
@@ -196,30 +195,6 @@ export function SettingsScreen() {
                           <SelectItem value="light">Light</SelectItem>
                           <SelectItem value="standard">Standard</SelectItem>
                           <SelectItem value="detailed">Detailed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <span className="inline-flex items-center gap-1.5 font-medium text-sm">
-                        Default Prompt Type <InfoTip content="Pre-fills the category for new prompts." />
-                      </span>
-                      <Select
-                        value={preferences.defaultPromptType}
-                        onValueChange={(value) => {
-                          const typed = value as typeof preferences.defaultPromptType;
-                          preferences.setDefaultPromptType(typed);
-                          save("default_prompt_type", typed);
-                        }}
-                      >
-                        <SelectTrigger aria-label="Default prompt type" className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent position="popper">
-                          {PROMPT_TYPE_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
                         </SelectContent>
                       </Select>
                     </div>

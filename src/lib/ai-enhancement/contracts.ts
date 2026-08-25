@@ -6,7 +6,10 @@ import type { EnhancementLevel, PromptAnalysis, PromptCategory, PromptTaskType }
 import { PROMPT_PRESET_IDS, type PromptPresetId } from "../prompt-presets";
 
 export const ENHANCEMENT_API_VERSION = 1 as const;
-export const OPENROUTER_MODEL = "stealth/ox-alpha" as const;
+
+/** Canonical AI provenance emitted by the version-1 response contract. */
+export const DEEPSEEK_PROVIDER = "deepseek" as const;
+export const DEEPSEEK_MODEL = "deepseek-v4-flash" as const;
 
 export const MAX_PROMPT_CHARACTERS = 15_000;
 export const MAX_REQUEST_BODY_BYTES = 128 * 1024;
@@ -108,11 +111,17 @@ export const EnhancementRequestV1Schema = z
   .strict();
 
 export type GenerationDescriptor =
-  | { kind: "ai"; provider: "openrouter"; model: typeof OPENROUTER_MODEL }
+  | { kind: "ai"; provider: typeof DEEPSEEK_PROVIDER; model: typeof DEEPSEEK_MODEL }
   | { kind: "deterministic" };
 
 const generationDescriptorSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("ai"), provider: z.literal("openrouter"), model: z.literal(OPENROUTER_MODEL) }).strict(),
+  z
+    .object({
+      kind: z.literal("ai"),
+      provider: z.literal(DEEPSEEK_PROVIDER),
+      model: z.literal(DEEPSEEK_MODEL),
+    })
+    .strict(),
   z.object({ kind: z.literal("deterministic") }).strict(),
 ]);
 

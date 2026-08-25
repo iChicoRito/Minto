@@ -48,13 +48,17 @@ export function PresetPickerDialog({ value, disabled = false, onSelect }: Preset
           {selectedPreset ? <Check aria-hidden="true" /> : <ChevronsUpDown aria-hidden="true" />}
         </Button>
       </DialogTrigger>
-      <DialogContent className="flex h-[min(90vh,64rem)] max-h-[calc(100vh-2rem)] min-h-0 w-[calc(100%-2rem)] max-w-[100rem] flex-col gap-4 overflow-hidden sm:max-w-[100rem]">
-        <DialogHeader>
-          <DialogTitle>Choose a preset</DialogTitle>
-          <DialogDescription>Select a prompt preset to guide the enhancer.</DialogDescription>
+      <DialogContent className="!max-w-[calc(100vw-1rem)] sm:!max-w-5xl flex h-[min(90vh,64rem)] max-h-[calc(100vh-2rem)] min-h-0 w-[calc(100vw-1rem)] min-w-0 flex-col gap-4 overflow-hidden sm:w-[calc(100vw-2rem)]">
+        <DialogHeader className="min-w-0">
+          <DialogTitle className="min-w-0 break-words">Choose a preset</DialogTitle>
+          <DialogDescription className="min-w-0 break-words">
+            Select a prompt preset to guide the enhancer.
+          </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="min-h-0 flex-1 pr-3">
-          <PromptPresetGallery selectedPresetId={value} onSelectPreset={handleSelect} />
+        <ScrollArea className="min-h-0 w-full min-w-0 flex-1 overflow-x-hidden">
+          <div className="w-full min-w-0 px-4 pb-4">
+            <PromptPresetGallery selectedPresetId={value} onSelectPreset={handleSelect} />
+          </div>
         </ScrollArea>
         <DialogFooter showCloseButton />
       </DialogContent>

@@ -9,30 +9,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import type { PredictiveHistoryEntry, PredictiveTextService } from "@/lib/predictive-text/contracts";
 import type { PromptPreset } from "@/lib/prompt-presets";
 import { SECTION_TITLES, type SectionId } from "@/prompt-engine/templates/template-types";
-import type { EnhancementLevel, PromptTaskType } from "@/prompt-engine/types";
+import type { EnhancementLevel } from "@/prompt-engine/types";
 
 import { PredictivePromptInput } from "./predictive-prompt-input";
 import { PresetPickerDialog } from "./preset-picker-dialog";
 import type { WorkspaceAction, WorkspaceControls } from "./workspace-state";
-
-const TASK_TYPES: readonly { value: PromptTaskType; label: string }[] = [
-  { value: "general", label: "General" },
-  { value: "bug-fix", label: "Bug Fix" },
-  { value: "feature", label: "Build Feature" },
-  { value: "code-review", label: "Code Review" },
-  { value: "refactor", label: "Refactor" },
-  { value: "testing", label: "Testing" },
-  { value: "documentation", label: "Documentation" },
-  { value: "rewrite", label: "Rewrite" },
-  { value: "summarize", label: "Summarize" },
-  { value: "research", label: "Research" },
-  { value: "comparison", label: "Compare Options" },
-  { value: "ui-review", label: "UX Review" },
-  { value: "image-prompt", label: "Image Prompt" },
-];
 
 const LEVELS: readonly { value: EnhancementLevel; label: string }[] = [
   { value: "light", label: "Light" },
@@ -96,6 +81,7 @@ export function PromptInputPanel({
   onCancel: () => void;
 }) {
   const [genZIndex, setGenZIndex] = useState(0);
+  const [predictiveEnabled, setPredictiveEnabled] = useState(true);
 
   useEffect(() => {
     if (!running) {
@@ -109,7 +95,8 @@ export function PromptInputPanel({
   }, [running]);
 
   const changeControls = (next: Partial<WorkspaceControls>) => {
-    const clearsPreset = next.taskType !== undefined && next.taskType !== controls.taskType;
+    const clearsPreset =
+      next.taskType !== undefined && next.taskType !== controls.taskType && next.presetId === undefined;
     dispatch({
       type: "controls-changed",
       controls: { ...controls, ...next, ...(clearsPreset ? { presetId: null } : {}) },
@@ -158,6 +145,7 @@ export function PromptInputPanel({
             history={history}
             historyResolved={historyResolved}
             predictionService={predictionService}
+            predictiveEnabled={predictiveEnabled}
             onValueChange={(value) => dispatch({ type: "prompt-changed", prompt: value })}
             onSubmit={onEnhance}
           />
@@ -167,24 +155,16 @@ export function PromptInputPanel({
         <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/20 px-3 py-3 sm:px-4">
           <div className="flex items-center gap-2">
             <PresetPickerDialog value={controls.presetId} disabled={running} onSelect={applyPreset} />
-            <div className="hidden items-center gap-1.5 sm:flex">
-              <Select
-                value={controls.taskType}
-                onValueChange={(value) => changeControls({ taskType: value as WorkspaceControls["taskType"] })}
+            <div className="hidden items-center gap-2 sm:flex">
+              <Switch
+                id="predictive-word-desktop"
+                checked={predictiveEnabled}
                 disabled={running}
-              >
-                <SelectTrigger size="sm" className="h-7 rounded-full bg-background px-3 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent position="popper">
-                  <SelectItem value="auto">Auto Detect</SelectItem>
-                  {TASK_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onCheckedChange={(checked) => setPredictiveEnabled(checked === true)}
+              />
+              <Label htmlFor="predictive-word-desktop" className="text-xs">
+                Predictive Word
+              </Label>
             </div>
             <span className="hidden text-muted-foreground text-xs sm:inline">
               {promptLength.toLocaleString()} / 15,000
@@ -230,30 +210,19 @@ export function PromptInputPanel({
         </div>
       </div>
 
-      {/* Mobile selects */}
+      {/* Mobile controls */}
       <div className="grid gap-3 sm:hidden">
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="prompt-type-mobile" className="text-xs">
-              Prompt Type
+          <div className="flex items-center justify-between rounded-md border bg-background px-3">
+            <Label htmlFor="predictive-word-mobile" className="text-xs">
+              Predictive Word
             </Label>
-            <Select
-              value={controls.taskType}
-              onValueChange={(value) => changeControls({ taskType: value as WorkspaceControls["taskType"] })}
+            <Switch
+              id="predictive-word-mobile"
+              checked={predictiveEnabled}
               disabled={running}
-            >
-              <SelectTrigger id="prompt-type-mobile" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent position="popper">
-                <SelectItem value="auto">Auto Detect</SelectItem>
-                {TASK_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onCheckedChange={(checked) => setPredictiveEnabled(checked === true)}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="enhancement-level-mobile" className="text-xs">

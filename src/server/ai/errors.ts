@@ -20,7 +20,7 @@ const SAFE_ERROR_MESSAGES: Readonly<Record<AiProviderErrorCode, string>> = {
   provider_rate_limited: "The AI provider is rate limited. Please try again later.",
   provider_unavailable: "The AI provider is currently unavailable.",
   model_unavailable: "The selected AI model is currently unavailable.",
-  priced_route_unavailable: "The zero-cost AI route is currently unavailable.",
+  priced_route_unavailable: "The AI provider rejected the request.",
   provider_refused: "The AI provider rejected the request.",
   invalid_provider_response: "The AI provider returned an invalid response.",
   output_too_large: "The AI provider returned too much output.",

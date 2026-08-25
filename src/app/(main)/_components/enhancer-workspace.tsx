@@ -20,13 +20,7 @@ import { getPromptPreset } from "@/lib/prompt-presets";
 import { enhancePrompt, validatePrompt } from "@/prompt-engine";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
-import {
-  describeCode,
-  describeError,
-  enhancementErrorCode,
-  HOURLY_LIMIT_MESSAGE,
-  isHourlyLimitReached,
-} from "./enhancement-errors";
+import { describeCode, describeError } from "./enhancement-errors";
 import { useMemory } from "./memory-provider";
 import { PromptInputPanel } from "./prompt-input-panel";
 import { ResultPanel } from "./result-panel";
@@ -40,7 +34,6 @@ const ENDPOINT =
 export function EnhancerWorkspace() {
   const defaultLevel = usePreferencesStore((state) => state.defaultEnhancementLevel);
   const defaultSections = usePreferencesStore((state) => state.defaultPromptSections);
-  const defaultPromptType = usePreferencesStore((state) => state.defaultPromptType);
   const historyEnabled = usePreferencesStore((state) => state.historyEnabled);
   const historyMaxEntries = usePreferencesStore((state) => state.historyMaxEntries);
   const preferencesSynced = usePreferencesStore((state) => state.isSynced);
@@ -48,7 +41,7 @@ export function EnhancerWorkspace() {
   const { confirm, dialog } = useConfirm();
   const [historyPending, setHistoryPending] = useState(false);
   const [savePending, setSavePending] = useState(false);
-  const [fallbackPending, setFallbackPending] = useState(false);
+  const [fallbackPending] = useState(false);
   const [activeTab, setActiveTab] = useState<"enhance" | "result">("enhance");
   const preferencesApplied = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -74,7 +67,7 @@ export function EnhancerWorkspace() {
   const [state, dispatch] = useReducer(
     workspaceReducer,
     {
-      taskType: defaultPromptType,
+      taskType: "auto",
       level: defaultLevel ?? DEFAULT_ENHANCEMENT_LEVEL,
       sections: defaultSections.length > 0 ? defaultSections : DEFAULT_PROMPT_SECTIONS,
       presetId: null,
@@ -93,13 +86,13 @@ export function EnhancerWorkspace() {
       type: "controls-changed",
       controls: {
         ...state.controls,
-        taskType: defaultPromptType,
+        taskType: "auto",
         level: defaultLevel ?? DEFAULT_ENHANCEMENT_LEVEL,
         sections: defaultSections.length > 0 ? defaultSections : DEFAULT_PROMPT_SECTIONS,
         presetId: null,
       },
     });
-  }, [defaultLevel, defaultPromptType, defaultSections, preferencesSynced, state.controls]);
+  }, [defaultLevel, defaultSections, preferencesSynced, state.controls]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -274,11 +267,7 @@ export function EnhancerWorkspace() {
       }
       const described = describeError(error);
       dispatch({ type: "enhancement-failed", runId, error: described });
-      // Exhausting the hourly allowance is an expected situation, not a
-      // failure of the user's prompt: surface it as a friendly notice while
-      // the canvas still offers retry and the local-rules fallback.
-      if (isHourlyLimitReached(enhancementErrorCode(error))) toast.warning(HOURLY_LIMIT_MESSAGE);
-      else toast.error(described.message);
+      toast.error(described.message);
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
     }

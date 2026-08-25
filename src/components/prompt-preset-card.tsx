@@ -46,7 +46,13 @@ export function PromptPresetCard({ preset, onSelectPreset, selected = false }: P
   const Icon = CATEGORY_ICON[preset.category] ?? Shapes;
 
   return (
-    <Card className={cn("flex flex-col", selected && "border-lime-500 ring-2 ring-lime-500/20")} size="sm">
+    <Card
+      className={cn(
+        "h-full w-full min-w-0 max-w-sm justify-self-center",
+        selected && "border-lime-500 ring-2 ring-lime-500/20",
+      )}
+      size="sm"
+    >
       <CardHeader>
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-lime-500/10 text-lime-600 dark:bg-lime-400/10 dark:text-lime-400">

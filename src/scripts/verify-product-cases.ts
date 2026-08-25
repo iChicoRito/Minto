@@ -1,10 +1,4 @@
-import {
-  describeCode,
-  describeError,
-  enhancementErrorCode,
-  HOURLY_LIMIT_MESSAGE,
-  isHourlyLimitReached,
-} from "../app/(main)/_components/enhancement-errors";
+import { describeCode, describeError, enhancementErrorCode } from "../app/(main)/_components/enhancement-errors";
 import { createWorkspaceState, workspaceReducer } from "../app/(main)/_components/workspace-state";
 import { getMarkdownCounts, prefixSelectedLines, wrapSelection } from "../components/markdown/markdown-editor-utils";
 import { AiEnhancementClientError } from "../lib/ai-enhancement/client";
@@ -111,7 +105,7 @@ export const PRODUCT_CASES = [
         analysis: {} as never,
         classification: {} as never,
         resolved: {} as never,
-        generation: { kind: "ai", provider: "openrouter", model: "stealth/ox-alpha" } as const,
+        generation: { kind: "ai", provider: "deepseek", model: "deepseek-v4-flash" } as const,
         generatedMarkdown: `# Objective\n\n${runId}`,
         markdown: `# Objective\n\n${runId}`,
         historyId: null,
@@ -170,7 +164,7 @@ export const PRODUCT_CASES = [
           analysis: {} as never,
           classification: {} as never,
           resolved: {} as never,
-          generation: { kind: "ai", provider: "openrouter", model: "stealth/ox-alpha" } as const,
+          generation: { kind: "ai", provider: "deepseek", model: "deepseek-v4-flash" } as const,
           generatedMarkdown: "# Objective\n\nFix login.",
           markdown: "# Objective\n\nFix login.",
           historyId: null,
@@ -347,11 +341,11 @@ export const PRODUCT_CASES = [
         service_busy: "The enhancement service is busy. Please try again shortly.",
         provider_timeout: "The enhancement service timed out. Please try again.",
         timeout: "The enhancement service timed out. Please try again.",
-        provider_rate_limited: HOURLY_LIMIT_MESSAGE,
+        provider_rate_limited: "The enhancement service is rate limited. Please try again later.",
         provider_unavailable: "The enhancement service could not be reached.",
         network: "The enhancement service could not be reached.",
         model_unavailable: "The enhancement service is currently unavailable.",
-        priced_route_unavailable: "The free enhancement route is currently unavailable.",
+        priced_route_unavailable: "The enhancement request was rejected. Please try again later.",
         provider_refused: "The request was rejected. Please adjust the prompt and try again.",
         invalid_provider_response: "Try again.",
         invalid_response: "Try again.",
@@ -364,29 +358,27 @@ export const PRODUCT_CASES = [
       }
       // No technical leakage anywhere in surfaced copy.
       for (const message of Object.values(expectedMessages)) {
-        if (/\b(?:429|503|500|http|header|quota|retry.?after|openrouter|status)\b/i.test(message)) {
+        if (/\b(?:429|503|500|http|header|quota|retry.?after|status)\b/i.test(message)) {
           throw new Error(`technical wording leaked into: ${message}`);
         }
       }
     },
   },
   {
-    name: "hourly usage limit surfaces the friendly notice without technical details",
+    name: "provider rate limits surface a generic notice without technical details",
     run: () => {
-      if (HOURLY_LIMIT_MESSAGE !== "You've reached your enhancement limit for this hour. Please try again later.") {
-        throw new Error("hourly-limit wording drifted");
-      }
       const error = new AiEnhancementClientError("provider_rate_limited", "upstream quota metadata", {
         retryable: true,
         retryAfterSeconds: 600,
       });
       const described = describeError(error);
-      if (described.message !== HOURLY_LIMIT_MESSAGE) throw new Error("rate-limited failure used the wrong copy");
+      if (described.message !== "The enhancement service is rate limited. Please try again later.") {
+        throw new Error("rate-limited failure used the wrong copy");
+      }
       if (!described.retryable || !described.fallbackEligible) throw new Error("rate-limited failure lost fallback");
-      if (!isHourlyLimitReached(enhancementErrorCode(error))) throw new Error("hourly-limit detection failed");
       // Raw upstream text and retry metadata must never reach the message.
       if (described.message.includes("upstream") || described.message.includes("600")) {
-        throw new Error("technical details leaked into the hourly-limit notice");
+        throw new Error("technical details leaked into the rate-limit notice");
       }
     },
   },

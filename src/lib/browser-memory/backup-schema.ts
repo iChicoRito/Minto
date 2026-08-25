@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { DEEPSEEK_MODEL, DEEPSEEK_PROVIDER } from "../ai-enhancement/contracts";
 import { defaultPreferenceSnapshot, type PreferenceSnapshot } from "../preferences/preference-snapshot";
 import type { MemoryExportData } from "./types";
 
@@ -24,8 +25,23 @@ const CATEGORIES = ["development", "writing", "research", "design", "general"] a
 const LEVELS = ["light", "standard", "detailed"] as const;
 const SECTION_ID = z.string().trim().min(1).max(80);
 
-const generationSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("ai"), provider: z.literal("openrouter"), model: z.literal("stealth/ox-alpha") }).strict(),
+const generationSchema = z.union([
+  z
+    .object({
+      kind: z.literal("ai"),
+      provider: z.literal(DEEPSEEK_PROVIDER),
+      model: z.literal(DEEPSEEK_MODEL),
+    })
+    .strict(),
+  // Legacy provenance is accepted only while importing backups. It is removed
+  // before the parsed data reaches the browser-memory contract.
+  z
+    .object({
+      kind: z.literal("ai"),
+      provider: z.literal("openrouter"),
+      model: z.literal("stealth/ox-alpha"),
+    })
+    .strict(),
   z.object({ kind: z.literal("deterministic") }).strict(),
 ]);
 const optionalGeneration = generationSchema.optional();
@@ -158,23 +174,48 @@ function refineData(data: z.infer<typeof dataSchema>): string | null {
 export function parseBackup(input: unknown): { backup: ParsedBackup; preview: BackupPreview } | { error: string } {
   const parsed = v2BackupSchema.safeParse(input);
   if (parsed.success) {
-    const dataError = refineData(parsed.data.data);
+    const data = migrateLegacyProvenance(parsed.data.data);
+    const dataError = refineData(data);
     if (dataError) return { error: dataError };
     const settings = parsed.data.settings as PreferenceSnapshot;
     return {
-      backup: { version: 2, exportedAt: parsed.data.exportedAt, settings, data: parsed.data.data as MemoryExportData },
-      preview: createPreview(2, parsed.data.exportedAt, settings, parsed.data.data),
+      backup: { version: 2, exportedAt: parsed.data.exportedAt, settings, data: data as MemoryExportData },
+      preview: createPreview(2, parsed.data.exportedAt, settings, data),
     };
   }
 
   const legacy = baseBackupSchema.safeParse(input);
   if (!legacy.success) return { error: "This backup is invalid or uses an unsupported version." };
-  const dataError = refineData(legacy.data.data);
+  const data = migrateLegacyProvenance(legacy.data.data);
+  const dataError = refineData(data);
   if (dataError) return { error: dataError };
   const settings = defaultPreferenceSnapshot();
   return {
-    backup: { version: 1, exportedAt: legacy.data.exportedAt, settings, data: legacy.data.data as MemoryExportData },
-    preview: createPreview(1, legacy.data.exportedAt, settings, legacy.data.data),
+    backup: { version: 1, exportedAt: legacy.data.exportedAt, settings, data: data as MemoryExportData },
+    preview: createPreview(1, legacy.data.exportedAt, settings, data),
+  };
+}
+
+function migrateLegacyProvenance(data: z.infer<typeof dataSchema>): z.infer<typeof dataSchema> {
+  const migrateRecord = <T extends Record<string, unknown>>(record: T): T => {
+    const generation = record.generation;
+    if (
+      typeof generation === "object" &&
+      generation !== null &&
+      (generation as { kind?: unknown }).kind === "ai" &&
+      (generation as { provider?: unknown }).provider === "openrouter" &&
+      (generation as { model?: unknown }).model === "stealth/ox-alpha"
+    ) {
+      const { generation: _legacyGeneration, ...withoutGeneration } = record;
+      return withoutGeneration as T;
+    }
+    return record;
+  };
+
+  return {
+    ...data,
+    history: data.history.map((record) => migrateRecord(record)),
+    prompts: data.prompts.map((record) => migrateRecord(record)),
   };
 }
 

@@ -13,12 +13,10 @@ your browser. An optional AI enhancement path is also supported when a public en
   to suggest an appendable continuation. The current draft may be sent to the configured enhancement API for optional
   AI prediction. Predictive AI is unavailable when `NEXT_PUBLIC_ENHANCEMENT_API_URL` is blank.
 - AI enhancement is different: the prompt and resulting completion leave your browser and are sent to the configured
-  enhancement API, which forwards them to OpenRouter and the Ox Alpha model operated by Stealth, an anonymous
-  third-party operator.
-- Provider retention and sensitivity warnings described below also apply to predictive fallback. Do not use sensitive or
-  confidential drafts with online AI features.
-- OpenRouter retains prompts and completions. The Ox Alpha page says that data is not used for training, but Stealth's
-  terms permit use for training, evaluation, and improvement. Treat sensitive or confidential information as prohibited.
+  enhancement API, which forwards them directly to DeepSeek using the `deepseek-v4-flash` model. Do not use sensitive
+  or confidential drafts with online AI features; review DeepSeek's current privacy and retention terms before sending data.
+- The DeepSeek credential is a server-only `DEEPSEEK_API_KEY`; it must never be put in a `NEXT_PUBLIC_*` variable or
+  shipped to the browser. Provider processing and retention policies apply to prompts and completions sent upstream.
 - The AI pipeline treats prompt text as untrusted and applies bounded safeguards, but no prompt-injection defense is
   universal. Do not rely on Prompt Enhancer to prevent prompt injection.
 
@@ -31,6 +29,18 @@ data or changing origins.
 npm install
 npm run dev
 ```
+
+## AI enhancement API configuration
+
+The browser calls the configured enhancement API; it never receives the DeepSeek credential. On the server, set
+`AI_ENHANCEMENT_ENABLED=true` and provide the server-only `DEEPSEEK_API_KEY`. The API uses DeepSeek's
+`deepseek-v4-flash` model. `DEEPSEEK_TIMEOUT_MS` controls the direct upstream timeout in milliseconds and defaults to
+65,000 when omitted or invalid. Never commit credentials or expose them through `NEXT_PUBLIC_*` variables.
+
+Configure `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` for shared or production deployments so the global
+concurrency admission control works across server instances. For local development, `AI_ADMISSION_OPEN=true` bypasses
+that shared lease. If the DeepSeek key is missing or blank (or AI is not enabled exactly as above), enhancement requests
+return a non-retryable `503` service-disabled response; browser-local rule-engine features remain available.
 
 Targeted checks:
 
@@ -57,7 +67,7 @@ worker. For the GitHub Pages project site, build with `NEXT_PUBLIC_BASE_PATH=/pr
 must complete before offline use; browser-local data remains origin-bound.
 
 The Pages workflow passes the public `NEXT_PUBLIC_ENHANCEMENT_API_URL` from the repository variable
-`ENHANCEMENT_API_URL`. It must not receive `OPENROUTER_API_KEY` or any other server secret; provider credentials belong
+`ENHANCEMENT_API_URL`. It must not receive `DEEPSEEK_API_KEY` or any other server secret; provider credentials belong
 on the enhancement API service.
 
 The planned public URL is <https://ichicorito.github.io/prompt-enhancer/> after the repository owner enables GitHub Pages

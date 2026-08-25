@@ -1,5 +1,5 @@
 /**
- * Contract verification harness for the versioned OpenRouter enhancement API.
+ * Contract verification harness for the versioned DeepSeek enhancement API.
  * This repository intentionally uses dependency-light node:assert runners
  * instead of a test framework.
  */
