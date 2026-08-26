@@ -13,6 +13,8 @@
  * ../prompt-engine/classifier/to-confidence.ts).
  */
 import type { ConfidenceBand } from "../prompt-engine/classifier/to-confidence";
+import type { SectionValue } from "../prompt-engine/generator/generate-markdown";
+import type { ContentSignals, FencedCode } from "../prompt-engine/parser/detect-content-signals";
 import type { SectionId } from "../prompt-engine/templates/template-types";
 import type { EnhancementLevel, PromptAnalysis, PromptCategory, PromptTaskType } from "../prompt-engine/types";
 
@@ -296,7 +298,7 @@ export const RULES_CASES: ReadonlyArray<RulesCase> = [
 /** Generator cases: filled section content → exact Markdown per strength. */
 export type GeneratorCase = {
   name: string;
-  content: Partial<Record<SectionId, string | string[]>>;
+  content: Partial<Record<SectionId, SectionValue>>;
   level: EnhancementLevel;
   expectedMarkdown: string;
 };
@@ -455,6 +457,144 @@ export const GENERATOR_CASES: ReadonlyArray<GeneratorCase> = [
     },
     level: "light",
     expectedMarkdown: "Investigate and resolve the issue.",
+  },
+  {
+    name: "numbered blocks render incrementing steps",
+    content: {
+      objective: "Plan the rollout.",
+      outline: [{ kind: "numbered", items: ["Freeze deploys", "Migrate schema", "", "Enable traffic"] }],
+    },
+    level: "standard",
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "Plan the rollout.",
+      "",
+      "## Outline",
+      "",
+      "1. Freeze deploys",
+      "2. Migrate schema",
+      "3. Enable traffic",
+    ].join("\n"),
+  },
+  {
+    name: "task blocks render checkbox markers",
+    content: {
+      objective: "Verify release readiness.",
+      verification: [
+        {
+          kind: "tasks",
+          items: [
+            { text: "Run the suite", done: false },
+            { text: "Update the changelog", done: true },
+          ],
+        },
+      ],
+    },
+    level: "standard",
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "Verify release readiness.",
+      "",
+      "## Verification",
+      "",
+      "- [ ] Run the suite",
+      "- [x] Update the changelog",
+    ].join("\n"),
+  },
+  {
+    name: "code blocks render a default three-backtick fence without a language",
+    content: {
+      objective: "Add retry logic.",
+      context: [{ kind: "code", language: null, lines: ["const attempts = 3;"] }],
+    },
+    level: "detailed",
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "Add retry logic.",
+      "",
+      "## Context",
+      "",
+      "```",
+      "const attempts = 3;",
+      "```",
+    ].join("\n"),
+  },
+  {
+    name: "code blocks lengthen the fence past embedded backtick runs",
+    content: {
+      objective: "Guard the fence.",
+      implementation: [{ kind: "code", language: "text", lines: ["```` nested"] }],
+    },
+    level: "standard",
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "Guard the fence.",
+      "",
+      "## Implementation",
+      "",
+      "`````text",
+      "```` nested",
+      "`````",
+    ].join("\n"),
+  },
+  {
+    name: "table blocks render headers, divider, and padded rows",
+    content: {
+      objective: "Choose a vendor.",
+      criteria: [
+        {
+          kind: "table",
+          header: ["Criterion", "Option A"],
+          rows: [["Cost", "low"], ["Risk"]],
+        },
+      ],
+    },
+    level: "standard",
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "Choose a vendor.",
+      "",
+      "## Criteria",
+      "",
+      "| Criterion | Option A |",
+      "| --- | --- |",
+      "| Cost | low |",
+      "| Risk |  |",
+    ].join("\n"),
+  },
+  {
+    name: "table cells escape pipes and truncate to the header width",
+    content: {
+      objective: "Compare shells.",
+      "comparison-scope": [
+        {
+          kind: "table",
+          header: ["Name", "Note"],
+          rows: [
+            ["fish", "friendly | interactive"],
+            ["zsh", "scriptable", "extra cell dropped"],
+          ],
+        },
+      ],
+    },
+    level: "detailed",
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "Compare shells.",
+      "",
+      "## Comparison Scope",
+      "",
+      "| Name | Note |",
+      "| --- | --- |",
+      "| fish | friendly \\| interactive |",
+      "| zsh | scriptable |",
+    ].join("\n"),
   },
 ];
 
@@ -682,5 +822,256 @@ export const PIPELINE_CASES: ReadonlyArray<PipelineCase> = [
       "Confirm that the login problem is resolved.",
     ].join("\n"),
     expectedHeadings: ["# Objective", "## Verification"],
+  },
+  {
+    name: "prompt with fenced code reproduces it under Problem",
+    input: "Fix broken login.\n\n```ts\nconst maxRetries = 3;\n```",
+    options: { level: "standard", sections: ["objective", "problem"] },
+    expectedAnalysis: {
+      original: "Fix broken login.\n\n```ts\nconst maxRetries = 3;\n```",
+      category: "development",
+      taskType: "bug-fix",
+      confidence: 100,
+      action: "fix",
+      subject: "broken login",
+      domain: "authentication",
+      technologies: [],
+      constraints: [],
+      requirements: ["Fix broken login"],
+      enhancementLevel: "standard",
+    },
+    expectedResolved: {
+      taskType: "bug-fix",
+      category: "development",
+      level: "standard",
+      sections: ["objective", "problem"],
+    },
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "Resolve the broken login.",
+      "",
+      "## Problem",
+      "",
+      "Address the broken login.",
+      "",
+      "```ts",
+      "const maxRetries = 3;",
+      "```",
+    ].join("\n"),
+    expectedHeadings: ["# Objective", "## Problem"],
+  },
+  {
+    name: "comparison prompt requesting a table emits the criteria skeleton",
+    input: "Compare PostgreSQL vs MySQL in a table",
+    expectedAnalysis: {
+      original: "Compare PostgreSQL vs MySQL in a table",
+      category: "research",
+      taskType: "comparison",
+      confidence: 71,
+      action: "compare",
+      subject: "PostgreSQL vs MySQL in a table",
+      domain: undefined,
+      technologies: ["MySQL", "PostgreSQL"],
+      constraints: [],
+      requirements: ["Compare PostgreSQL vs MySQL in a table"],
+      enhancementLevel: "standard",
+    },
+    expectedResolved: {
+      taskType: "comparison",
+      category: "research",
+      level: "standard",
+      sections: ["objective", "criteria", "output-format"],
+    },
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "Compare PostgreSQL vs MySQL in a table.",
+      "",
+      "## Criteria",
+      "",
+      "Compare the relevant capabilities and meaningful differences.",
+      "",
+      "| Criterion | Option A | Option B |",
+      "| --- | --- | --- |",
+      "| Fit for purpose |  |  |",
+      "| Effort |  |  |",
+      "| Risk |  |  |",
+      "",
+      "## Output Format",
+      "",
+      "Return the result in clear Markdown.",
+    ].join("\n"),
+    expectedHeadings: ["# Objective", "## Criteria", "## Output Format"],
+  },
+  {
+    name: "checklist wording turns verification into task items",
+    input: "Create a deployment checklist for the billing page",
+    expectedAnalysis: {
+      original: "Create a deployment checklist for the billing page",
+      category: "general",
+      taskType: "general",
+      confidence: 57,
+      action: "create",
+      subject: "deployment checklist for the billing page",
+      domain: undefined,
+      technologies: [],
+      constraints: [],
+      requirements: ["Create deployment checklist for the billing page"],
+      enhancementLevel: "standard",
+    },
+    expectedResolved: {
+      taskType: "general",
+      category: "general",
+      level: "standard",
+      sections: ["objective", "requirements", "verification"],
+    },
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "Create deployment checklist for the billing page.",
+      "",
+      "## Requirements",
+      "",
+      "- Create deployment checklist for the billing page",
+      "",
+      "## Verification",
+      "",
+      "- [ ] Confirm that the deployment checklist for the billing page is resolved.",
+    ].join("\n"),
+    expectedHeadings: ["# Objective", "## Requirements", "## Verification"],
+  },
+  {
+    name: "step-by-step wording numbers the outline section",
+    input: "Write a step-by-step migration guide",
+    options: { level: "standard", sections: ["objective", "outline"] },
+    expectedAnalysis: {
+      original: "Write a step-by-step migration guide",
+      category: "general",
+      taskType: "general",
+      confidence: 43,
+      action: undefined,
+      subject: undefined,
+      domain: undefined,
+      technologies: [],
+      constraints: [],
+      requirements: [],
+      enhancementLevel: "standard",
+    },
+    expectedResolved: {
+      taskType: "general",
+      category: "general",
+      level: "standard",
+      sections: ["objective", "outline"],
+    },
+    expectedMarkdown: [
+      "# Objective",
+      "",
+      "Write a step-by-step migration guide.",
+      "",
+      "## Outline",
+      "",
+      "1. Present the topic, main points, and conclusion.",
+    ].join("\n"),
+    expectedHeadings: ["# Objective", "## Outline"],
+  },
+];
+
+/**
+ * Content-signal cases (intent-driven formats): raw prompt → exact
+ * ContentSignals record. Threshold semantics are documented on
+ * detect-content-signals.ts; these goldens pin both the positive and the
+ * deliberate negative sides of every rule.
+ */
+export type SignalsCase = {
+  name: string;
+  input: string;
+  expected: ContentSignals;
+  /** When present, extractFirstFencedCode must return exactly this value. */
+  expectedFirstFence?: FencedCode | null;
+};
+
+function quietSignals(overrides: Partial<ContentSignals>): ContentSignals {
+  return {
+    containsCode: false,
+    hasFencedCode: false,
+    fencedCodeCount: 0,
+    firstFenceLanguage: null,
+    inlineCodeSpanCount: 0,
+    wantsTable: false,
+    wantsSteps: false,
+    checklistIntent: false,
+    ...overrides,
+  };
+}
+
+export const SIGNALS_CASES: ReadonlyArray<SignalsCase> = [
+  {
+    name: "fenced typescript is detected with its language",
+    input: "Fix the login bug:\n\n```ts\nconst retry = 3;\n```",
+    expected: quietSignals({ containsCode: true, hasFencedCode: true, fencedCodeCount: 1, firstFenceLanguage: "ts" }),
+    expectedFirstFence: { language: "ts", lines: ["const retry = 3;"] },
+  },
+  {
+    name: "unclosed fence still counts with its language",
+    input: "Here is my snippet:\n```python\nprint('hi')",
+    expected: quietSignals({
+      containsCode: true,
+      hasFencedCode: true,
+      fencedCodeCount: 1,
+      firstFenceLanguage: "python",
+    }),
+    expectedFirstFence: { language: "python", lines: ["print('hi')"] },
+  },
+  {
+    name: "invalid fence language normalizes to null",
+    input: "```\nplain\n```",
+    expected: quietSignals({ containsCode: true, hasFencedCode: true, fencedCodeCount: 1, firstFenceLanguage: null }),
+    expectedFirstFence: { language: null, lines: ["plain"] },
+  },
+  {
+    name: "code-like inline span triggers detection without a fence",
+    input: "The `retryCount = 3;` value must persist.",
+    expected: quietSignals({ containsCode: true, inlineCodeSpanCount: 1 }),
+  },
+  {
+    name: "prose mentioning code once stays negative",
+    input: "Improve the wording of this code documentation.",
+    expected: quietSignals({}),
+  },
+  {
+    name: "explicit request phrase triggers detection",
+    input: "Rewrite the docs and include the code for setup.",
+    expected: quietSignals({ containsCode: true }),
+  },
+  {
+    name: "two vocabulary words plus an inline span trigger detection",
+    input: "Run the command in your terminal and paste `npm run build` output.",
+    expected: quietSignals({ containsCode: true, inlineCodeSpanCount: 1 }),
+  },
+  {
+    name: "table wording sets wantsTable",
+    input: "Compare the two options in a table.",
+    expected: quietSignals({ wantsTable: true }),
+  },
+  {
+    name: "side-by-side phrasing sets wantsTable",
+    input: "Show pros and cons side-by-side.",
+    expected: quietSignals({ wantsTable: true }),
+  },
+  {
+    name: "checklist wording also sees step wording when steps are mentioned",
+    input: "Turn these steps into a checklist.",
+    expected: quietSignals({ wantsSteps: true, checklistIntent: true }),
+  },
+  {
+    name: "task list phrasing sets checklist intent only",
+    input: "Format the plan as a task list.",
+    expected: quietSignals({ checklistIntent: true }),
+  },
+  {
+    name: "step-by-step phrasing sets wantsSteps",
+    input: "Write a step-by-step migration guide",
+    expected: quietSignals({ wantsSteps: true }),
   },
 ];

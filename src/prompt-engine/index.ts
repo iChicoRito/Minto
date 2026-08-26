@@ -11,15 +11,23 @@
 
 import type { ClassificationResult } from "./classifier/classify-prompt";
 import { classifyPrompt } from "./classifier/classify-prompt";
-import { generateMarkdown } from "./generator/generate-markdown";
+import { generateMarkdown, type SectionValue } from "./generator/generate-markdown";
+import { detectContentSignals } from "./parser/detect-content-signals";
 import { type ParsedPrompt, parsePrompt } from "./parser/parse-prompt";
+import {
+  appendBlock,
+  bulletsToNumbered,
+  bulletsToTasks,
+  CODE_SECTION_PRIORITY,
+  codeBlockFrom,
+  TABLE_SECTION_PRIORITY,
+  tableSkeleton,
+} from "./rules/intent-blocks";
 import { correctGrammarOnly, polishLight } from "./rules/light-polish";
 import { selectSections } from "./rules/select-sections";
 import { resolveTemplate } from "./templates/resolve-template";
 import type { SectionId } from "./templates/template-types";
 import type { EnhancementLevel, PromptAnalysis, PromptCategory, PromptTaskType } from "./types";
-
-type SectionContent = string | string[];
 
 export type EnhancePromptOptions = {
   level?: EnhancementLevel;
@@ -122,8 +130,8 @@ function buildContent(
   sections: readonly SectionId[],
   parsed: ParsedPrompt,
   raw: string,
-): Partial<Record<SectionId, SectionContent>> {
-  const content: Partial<Record<SectionId, SectionContent>> = {};
+): Partial<Record<SectionId, SectionValue>> {
+  const content: Partial<Record<SectionId, SectionValue>> = {};
 
   for (const section of sections) {
     if (section === "objective") {
@@ -138,6 +146,82 @@ function buildContent(
   }
 
   return content;
+}
+
+/**
+ * Authored intent mapping (decision D8): converts prepared section values
+ * into rich blocks when structural signals justify it. Code and table
+ * constructs attach to at most one section each (priority order); task and
+ * numbered conversions reshape existing narrative/bullet bodies in place.
+ * Light and grammar-only paths never reach this function.
+ */
+function applyIntentBlocks(
+  content: Partial<Record<SectionId, SectionValue>>,
+  sections: readonly SectionId[],
+  raw: string,
+  taskType: PromptTaskType,
+): Partial<Record<SectionId, SectionValue>> {
+  const signals = detectContentSignals(raw);
+  const result: Partial<Record<SectionId, SectionValue>> = { ...content };
+
+  if (signals.hasFencedCode) {
+    const target = CODE_SECTION_PRIORITY.find((id) => sections.includes(id));
+    const block = codeBlockFrom(raw);
+    if (target !== undefined && block !== null) {
+      result[target] = appendBlock(result[target], block);
+    }
+  }
+
+  if (taskType === "comparison" || signals.wantsTable) {
+    const target = TABLE_SECTION_PRIORITY.find((id) => sections.includes(id));
+    if (target !== undefined) {
+      result[target] = appendBlock(result[target], tableSkeleton());
+    }
+  }
+
+  if (signals.checklistIntent) {
+    for (const id of TASK_SECTION_IDS) {
+      result[id] = reshapeAsTasks(result[id]);
+    }
+  }
+
+  if (signals.wantsSteps) {
+    for (const id of NUMBERED_SECTION_IDS) {
+      result[id] = reshapeAsNumbered(result[id]);
+    }
+  }
+
+  return result;
+}
+
+/** Sections reshaped as unchecked task lists when checklist wording appears. */
+const TASK_SECTION_IDS: readonly SectionId[] = ["acceptance-criteria", "verification"];
+
+/** Sections reshaped as numbered steps when step wording appears. */
+const NUMBERED_SECTION_IDS: readonly SectionId[] = ["outline", "key-points"];
+
+/** Views a legacy-or-rich section value's plain items, or undefined when already rich. */
+function plainItems(value: SectionValue | undefined): readonly string[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value === "string") {
+    return [value];
+  }
+  if (Array.isArray(value) && (value.length === 0 || typeof value[0] === "string")) {
+    return value as readonly string[];
+  }
+  return undefined;
+}
+
+function reshapeAsTasks(value: SectionValue | undefined): SectionValue {
+  const items = plainItems(value);
+  return items === undefined ? (value ?? []) : bulletsToTasks(items);
+}
+
+function reshapeAsNumbered(value: SectionValue | undefined): SectionValue {
+  const items = plainItems(value);
+  return items === undefined ? (value ?? []) : bulletsToNumbered(items);
 }
 
 /**
@@ -197,14 +281,24 @@ export function enhancePrompt(raw: string, options?: EnhancePromptOptions): Enha
     return { analysis, classification, resolved, markdown: generateMarkdown({ objective }, { level }) };
   }
 
-  const content = buildContent(sections, parsed, raw);
+  const content = applyIntentBlocks(buildContent(sections, parsed, raw), sections, raw, taskType);
   return { analysis, classification, resolved, markdown: generateMarkdown(content, { level }) };
 }
 
 export type { ClassificationResult } from "./classifier/classify-prompt";
 export type { ConfidenceBand } from "./classifier/to-confidence";
+export type { SectionBlock, SectionValue } from "./generator/generate-markdown";
+export type { ContentSignals } from "./parser/detect-content-signals";
 export type { ParsedPrompt } from "./parser/parse-prompt";
 export type { PromptTemplate, SectionId } from "./templates/template-types";
 export type { EnhancementLevel, PromptAnalysis, PromptCategory, PromptTaskType } from "./types";
 export { MAX_PROMPT_CHARACTERS, validatePrompt } from "./validate-prompt";
-export { classifyPrompt, generateMarkdown, parsePrompt, polishLight, resolveTemplate, selectSections };
+export {
+  classifyPrompt,
+  detectContentSignals,
+  generateMarkdown,
+  parsePrompt,
+  polishLight,
+  resolveTemplate,
+  selectSections,
+};

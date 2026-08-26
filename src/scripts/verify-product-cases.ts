@@ -1,6 +1,21 @@
 import { describeCode, describeError, enhancementErrorCode } from "../app/(main)/_components/enhancement-errors";
 import { createWorkspaceState, workspaceReducer } from "../app/(main)/_components/workspace-state";
-import { getMarkdownCounts, prefixSelectedLines, wrapSelection } from "../components/markdown/markdown-editor-utils";
+import {
+  getMarkdownCounts,
+  insertCodeBlock,
+  insertHorizontalRule,
+  insertImage,
+  insertLink,
+  insertTableSkeleton,
+  prefixSelectedLines,
+  quoteSelectedLines,
+  setHeadingLevel,
+  taskPrefixSelectedLines,
+  togglePrefixSelectedLines,
+  toggleTaskChecked,
+  toggleWrapSelection,
+  wrapSelection,
+} from "../components/markdown/markdown-editor-utils";
 import { AiEnhancementClientError } from "../lib/ai-enhancement/client";
 import { parseBackup } from "../lib/browser-memory/backup-schema";
 import { filterLibraryPrompts, normalizeTags, titleFromPrompt } from "../lib/browser-memory/record-utils";
@@ -460,6 +475,120 @@ export const PRODUCT_CASES = [
       const generic = enhancePrompt("fix it").markdown;
       if (!generic.includes("Resolve the described issue.")) throw new Error("generic objective drifted");
       if (!generic.includes("Confirm that the issue is resolved.")) throw new Error("generic verification drifted");
+    },
+  },
+  {
+    name: "toggle wrap adds and removes inline markers",
+    run: () => {
+      const wrapped = toggleWrapSelection({ value: "login", selectionStart: 0, selectionEnd: 5 }, "**", "bold text");
+      if (wrapped.value !== "**login**" || wrapped.selectionStart !== 2 || wrapped.selectionEnd !== 7) {
+        throw new Error("bold wrap drifted");
+      }
+      const unwrapped = toggleWrapSelection(wrapped, "**", "bold text");
+      if (unwrapped.value !== "login" || unwrapped.selectionStart !== 0 || unwrapped.selectionEnd !== 5) {
+        throw new Error("bold unwrap drifted");
+      }
+      const italic = toggleWrapSelection({ value: "code", selectionStart: 0, selectionEnd: 4 }, "*", "italic text");
+      if (italic.value !== "*code*" || italic.selectionStart !== 1 || italic.selectionEnd !== 5) {
+        throw new Error("italic marker must use a single asterisk");
+      }
+      const boldItalic = toggleWrapSelection({ value: "x", selectionStart: 0, selectionEnd: 1 }, "***", "em");
+      if (boldItalic.value !== "***x***") throw new Error("bold-italic wrap drifted");
+      const struck = toggleWrapSelection({ value: "gone", selectionStart: 0, selectionEnd: 4 }, "~~", "struck text");
+      if (struck.value !== "~~gone~~") throw new Error("strikethrough wrap drifted");
+    },
+  },
+  {
+    name: "line prefix toggles remove when every line carries the prefix",
+    run: () => {
+      const added = togglePrefixSelectedLines({ value: "one\ntwo", selectionStart: 0, selectionEnd: 7 }, "- ");
+      if (added.value !== "- one\n- two") throw new Error("bullet toggle-add drifted");
+      const removed = togglePrefixSelectedLines(added, "- ");
+      if (removed.value !== "one\ntwo" || removed.selectionStart !== 0 || removed.selectionEnd !== 7) {
+        throw new Error("bullet toggle-remove drifted");
+      }
+    },
+  },
+  {
+    name: "heading level sets switches and strips ATX prefixes",
+    run: () => {
+      const h1 = setHeadingLevel({ value: "Title", selectionStart: 0, selectionEnd: 5 }, 1);
+      if (h1.value !== "# Title" || h1.selectionStart !== 2 || h1.selectionEnd !== 7) {
+        throw new Error("heading 1 drift");
+      }
+      const h2 = setHeadingLevel(h1, 2);
+      if (h2.value !== "## Title" || h2.selectionStart !== 3 || h2.selectionEnd !== 8) {
+        throw new Error("heading switch drift");
+      }
+      const none = setHeadingLevel(h2, 2);
+      if (none.value !== "Title" || none.selectionStart !== 0 || none.selectionEnd !== 5) {
+        throw new Error("heading strip drift");
+      }
+      const h3 = setHeadingLevel(none, 3);
+      if (h3.value !== "### Title") throw new Error("heading 3 drift");
+    },
+  },
+  {
+    name: "block inserts produce exact markdown and selections",
+    run: () => {
+      const table = insertTableSkeleton({ value: "", selectionStart: 0, selectionEnd: 0 });
+      const expectedTable = "| Column A | Column B |\n| --- | --- |\n|  |  |\n|  |  |\n|  |  |";
+      if (table.value !== expectedTable || table.selectionStart !== 2 || table.selectionEnd !== 10) {
+        throw new Error("table skeleton drift");
+      }
+      const fenced = insertCodeBlock({ value: "body", selectionStart: 0, selectionEnd: 4 });
+      if (fenced.value !== "```\nbody\n```" || fenced.selectionStart !== 4 || fenced.selectionEnd !== 8) {
+        throw new Error("code block drift");
+      }
+      const separated = insertCodeBlock({ value: "a\nb", selectionStart: 2, selectionEnd: 3 });
+      if (separated.value !== "a\n\n```\nb\n```" || separated.selectionStart !== 7 || separated.selectionEnd !== 8) {
+        throw new Error("code block separation drift");
+      }
+      const rule = insertHorizontalRule({ value: "para", selectionStart: 4, selectionEnd: 4 });
+      if (rule.value !== "para\n\n---" || rule.selectionStart !== 9 || rule.selectionEnd !== 9) {
+        throw new Error("horizontal rule drift");
+      }
+      const image = insertImage({ value: "pic", selectionStart: 3, selectionEnd: 3 });
+      if (
+        image.value !== "pic![alt text](https://example.com/image.png)" ||
+        image.selectionStart !== 5 ||
+        image.selectionEnd !== 13
+      ) {
+        throw new Error("image insert drift");
+      }
+      const imageAltFromSelection = insertImage({ value: "cat pic", selectionStart: 0, selectionEnd: 7 });
+      if (imageAltFromSelection.value !== "![cat pic](https://example.com/image.png)") {
+        throw new Error("image must reuse the selection as alt text");
+      }
+      const link = insertLink({ value: "docs", selectionStart: 0, selectionEnd: 4 });
+      if (link.value !== "[docs](https://example.com)") throw new Error("link URL placeholder drifted");
+    },
+  },
+  {
+    name: "quote and task transforms cover the remaining constructs",
+    run: () => {
+      const quoted = quoteSelectedLines({ value: "wise words", selectionStart: 0, selectionEnd: 10 });
+      if (quoted.value !== "> wise words") throw new Error("blockquote add drifted");
+      const unquoted = quoteSelectedLines(quoted);
+      if (unquoted.value !== "wise words") throw new Error("blockquote toggle-off drifted");
+
+      const task = taskPrefixSelectedLines({ value: "ship it", selectionStart: 0, selectionEnd: 7 }, false);
+      if (task.value !== "- [ ] ship it") throw new Error("task prefix drifted");
+      const doneTask = taskPrefixSelectedLines({ value: "fix bug", selectionStart: 0, selectionEnd: 7 }, true);
+      if (doneTask.value !== "- [x] fix bug") throw new Error("checked task prefix drifted");
+      const fromBullet = taskPrefixSelectedLines({ value: "- old item", selectionStart: 0, selectionEnd: 10 }, false);
+      if (fromBullet.value !== "- [ ] old item") throw new Error("task must replace the bullet marker");
+      const indented = taskPrefixSelectedLines({ value: "  nested", selectionStart: 0, selectionEnd: 8 }, false);
+      if (indented.value !== "  - [ ] nested") throw new Error("task must preserve indentation");
+
+      const flipped = toggleTaskChecked({
+        value: "- [ ] a\n- [X] b",
+        selectionStart: 0,
+        selectionEnd: 15,
+      });
+      if (flipped.value !== "- [x] a\n- [ ] b" || flipped.selectionStart !== 0 || flipped.selectionEnd !== 15) {
+        throw new Error("check toggle drift (uppercase X must normalize)");
+      }
     },
   },
 ] as const;

@@ -2,21 +2,64 @@ import { z } from "zod";
 
 import {
   MAX_CHARS_PER_ITEM,
+  MAX_CODE_LINES,
   MAX_ITEMS_PER_SECTION,
   MAX_MODEL_OUTPUT_BYTES,
   MAX_NORMALIZED_MARKDOWN_CHARACTERS,
+  MAX_TABLE_CELL_CHARS,
+  MAX_TABLE_COLUMNS,
 } from "../../lib/ai-enhancement/contracts";
 import { SECTION_TITLES, type SectionId } from "../../prompt-engine/templates/template-types";
 import type { ResolvedEnhancementPolicy } from "./policy-resolver";
 
-export type GeneratedDocument = {
-  sections: Array<{ id: SectionId; content: string[] }>;
+export type GeneratedDocumentCodePayload = {
+  language: string | null;
+  lines: string[];
 };
+
+export type GeneratedDocumentTablePayload = {
+  header: string[];
+  rows: string[][];
+};
+
+export type GeneratedDocumentSection = {
+  id: SectionId;
+  content: string[];
+  code?: GeneratedDocumentCodePayload;
+  table?: GeneratedDocumentTablePayload;
+};
+
+export type GeneratedDocument = {
+  sections: GeneratedDocumentSection[];
+};
+
+/** Code fence languages are bounded identifiers, never prose or injection vectors. */
+const CODE_LANGUAGE_PATTERN = /^[A-Za-z0-9+#._-]*$/;
+
+const modelCodePayloadSchema = z
+  .object({
+    language: z
+      .string()
+      .max(32)
+      .regex(CODE_LANGUAGE_PATTERN, "code language must match /^[A-Za-z0-9+#._-]*$/")
+      .nullable(),
+    lines: z.array(z.string()).min(1),
+  })
+  .strict();
+
+const modelTablePayloadSchema = z
+  .object({
+    header: z.array(z.string()).min(2).max(MAX_TABLE_COLUMNS),
+    rows: z.array(z.array(z.string())).min(1),
+  })
+  .strict();
 
 const modelSectionSchema = z
   .object({
     id: z.string().min(1),
     content: z.array(z.string()),
+    code: modelCodePayloadSchema.optional(),
+    table: modelTablePayloadSchema.optional(),
   })
   .strict();
 
@@ -275,6 +318,29 @@ function normalizeModelText(value: string): string {
     .trim();
 }
 
+/**
+ * Code lines must survive verbatim: whitespace is never collapsed and
+ * indentation is preserved, so only carriage/control characters are stripped
+ * (tabs stay intact) and trailing whitespace is trimmed. Code lines must not
+ * pass through normalizeModelText, whose whitespace collapse would destroy
+ * multi-line structure.
+ */
+export function normalizeCodeLine(line: string): string {
+  return line.replace(/\p{Cc}/gu, (character) => (character === "\t" ? character : "")).replace(/\s+$/u, "");
+}
+
+/** Longest backtick run at the start of a whitespace-trimmed code line. */
+function longestBacktickRunAtTrimmedLineStart(lines: readonly string[]): number {
+  let longest = 0;
+  for (const line of lines) {
+    const run = /^`+/.exec(line.trimStart());
+    if (run !== null) {
+      longest = Math.max(longest, run[0].length);
+    }
+  }
+  return longest;
+}
+
 function escapeMarkdownText(value: string): string {
   let escaped = "";
 
@@ -317,6 +383,8 @@ function validateModelDocument(value: unknown, policy: ResolvedEnhancementPolicy
     invalidModelOutput("trusted policy contains duplicate sections");
   }
 
+  const formatBySectionId = new Map(policy.sections.map((policySection) => [policySection.id, policySection.format]));
+
   const seenIds = new Set<SectionId>();
   for (const [index, section] of parsed.data.sections.entries()) {
     if (!KNOWN_SECTION_IDS.has(section.id as SectionId)) {
@@ -329,7 +397,8 @@ function validateModelDocument(value: unknown, policy: ResolvedEnhancementPolicy
     }
     seenIds.add(sectionId);
 
-    if (!policyIdSet.has(sectionId)) {
+    const sectionFormat = formatBySectionId.get(sectionId);
+    if (!policyIdSet.has(sectionId) || sectionFormat === undefined) {
       invalidModelOutput(`section is not allowed by the trusted policy: ${section.id}`);
     }
     if (section.content.length === 0) {
@@ -347,6 +416,19 @@ function validateModelDocument(value: unknown, policy: ResolvedEnhancementPolicy
         invalidModelOutput(`section item is empty: ${section.id}[${itemIndex}]`);
       }
     }
+
+    // Rich code/table/task payloads are validated against the trusted
+    // policy's per-section format: they are only accepted where the format
+    // demands them, and required where it does.
+    if (sectionFormat === "code") {
+      validateCodePayload(sectionId, section.code, section.table);
+    } else if (sectionFormat === "table") {
+      validateTablePayload(sectionId, section.table, section.code);
+    } else if (sectionFormat === "tasks") {
+      validateTasksItems(sectionId, section.content, section.code !== undefined || section.table !== undefined);
+    } else if (section.code !== undefined || section.table !== undefined) {
+      invalidModelOutput(`section carries a rich payload its format does not allow: ${section.id}`);
+    }
   }
 
   const missingIds = policyIds.filter((sectionId) => !seenIds.has(sectionId));
@@ -355,6 +437,81 @@ function validateModelDocument(value: unknown, policy: ResolvedEnhancementPolicy
   }
 
   return parsed.data.sections;
+}
+
+function validateCodePayload(
+  sectionId: SectionId,
+  code: GeneratedDocumentCodePayload | undefined,
+  table: GeneratedDocumentTablePayload | undefined,
+): void {
+  if (code === undefined) {
+    invalidModelOutput(`code section is missing its code payload: ${sectionId}`);
+  }
+  if (table !== undefined) {
+    invalidModelOutput(`section carries a disallowed table payload: ${sectionId}`);
+  }
+  if (code.lines.length > MAX_CODE_LINES) {
+    invalidModelOutput(`section has too many code lines: ${sectionId}`);
+  }
+
+  let hasVisibleLine = false;
+  for (const [lineIndex, line] of code.lines.entries()) {
+    const normalizedLine = normalizeCodeLine(line);
+    if (normalizedLine.length > MAX_CHARS_PER_ITEM) {
+      invalidModelOutput(`code line is too long: ${sectionId}[${lineIndex}]`);
+    }
+    if (normalizedLine.length > 0) {
+      hasVisibleLine = true;
+    }
+  }
+  if (!hasVisibleLine) {
+    invalidModelOutput(`section has an empty code payload: ${sectionId}`);
+  }
+}
+
+function validateTablePayload(
+  sectionId: SectionId,
+  table: GeneratedDocumentTablePayload | undefined,
+  code: GeneratedDocumentCodePayload | undefined,
+): void {
+  if (table === undefined) {
+    invalidModelOutput(`table section is missing its table payload: ${sectionId}`);
+  }
+  if (code !== undefined) {
+    invalidModelOutput(`section carries a disallowed code payload: ${sectionId}`);
+  }
+  if (table.rows.length > MAX_ITEMS_PER_SECTION) {
+    invalidModelOutput(`section has too many table rows: ${sectionId}`);
+  }
+
+  for (const [cellIndex, cell] of table.header.entries()) {
+    if (normalizeModelText(cell).length > MAX_TABLE_CELL_CHARS) {
+      invalidModelOutput(`table header cell is too long: ${sectionId}[${cellIndex}]`);
+    }
+  }
+  for (const [rowIndex, row] of table.rows.entries()) {
+    if (row.length !== table.header.length) {
+      invalidModelOutput(`table row width does not match the header: ${sectionId}[${rowIndex}]`);
+    }
+    for (const [cellIndex, cell] of row.entries()) {
+      if (normalizeModelText(cell).length > MAX_TABLE_CELL_CHARS) {
+        invalidModelOutput(`table cell is too long: ${sectionId}[${rowIndex}][${cellIndex}]`);
+      }
+    }
+  }
+}
+
+function validateTasksItems(sectionId: SectionId, content: readonly string[], hasRichPayload: boolean): void {
+  if (hasRichPayload) {
+    invalidModelOutput(`section carries a rich payload its format does not allow: ${sectionId}`);
+  }
+  // Task items must carry their checkbox marker at position 0 of the
+  // normalized text; normalizeModelText's trim is the only leading tolerance.
+  for (const [itemIndex, item] of content.entries()) {
+    if (!/^\[[ xX]\] \S/.test(normalizeModelText(item))) {
+      invalidModelOutput(`section item is not a task checkbox item: ${sectionId}[${itemIndex}]`);
+    }
+  }
 }
 
 function canonicalizeValidatedModelDocument(
@@ -371,6 +528,20 @@ function canonicalizeValidatedModelDocument(
       return {
         id: policySection.id,
         content: section.content.map(normalizeModelText),
+        // Rich payloads are canonicalized with structure-preserving
+        // normalizers (never the whitespace-collapsing text normalizer for
+        // code lines) and omitted entirely when absent.
+        ...(section.code === undefined
+          ? {}
+          : { code: { language: section.code.language, lines: section.code.lines.map(normalizeCodeLine) } }),
+        ...(section.table === undefined
+          ? {}
+          : {
+              table: {
+                header: section.table.header.map(normalizeModelText),
+                rows: section.table.rows.map((row) => row.map(normalizeModelText)),
+              },
+            }),
       };
     }),
   };
@@ -412,10 +583,29 @@ export function renderGeneratedMarkdown(document: GeneratedDocument, policy: Res
       invalidModelOutput("trusted policy order does not match the canonical document");
     }
 
-    const body =
-      policySection.format === "bullets"
-        ? section.content.map((item) => `- ${escapeMarkdownText(normalizeModelText(item))}`).join("\n")
-        : section.content.map((item) => escapeMarkdownText(normalizeModelText(item))).join("\n\n");
+    // Canonical sections are already normalized per format; paragraphs and
+    // bullets keep re-applying the text normalizer to preserve their exact
+    // legacy rendering behavior.
+    let body: string;
+    if (policySection.format === "code") {
+      body = renderCodeBody(section);
+    } else if (policySection.format === "table") {
+      body = renderTableBody(section);
+    } else if (policySection.format === "tasks") {
+      body = section.content
+        .map((item) => {
+          const match = /^\[([ xX])\] (.*)$/.exec(item);
+          if (match === null) {
+            invalidModelOutput(`section item is not a task checkbox item: ${policySection.id}`);
+          }
+          return `- [${match[1].toLowerCase()}] ${escapeMarkdownText(match[2])}`;
+        })
+        .join("\n");
+    } else if (policySection.format === "bullets") {
+      body = section.content.map((item) => `- ${escapeMarkdownText(normalizeModelText(item))}`).join("\n");
+    } else {
+      body = section.content.map((item) => escapeMarkdownText(normalizeModelText(item))).join("\n\n");
+    }
     const marker = policySection.id === "objective" ? "#" : "##";
     blocks.push(`${marker} ${SECTION_TITLES[policySection.id]}\n\n${body}`);
   }
@@ -425,4 +615,34 @@ export function renderGeneratedMarkdown(document: GeneratedDocument, policy: Res
     throw new ModelOutputTooLargeError("normalized Markdown exceeds the character limit");
   }
   return markdown;
+}
+
+/**
+ * Renders a code section as a fenced block whose fence is always longer than
+ * any backtick run at a trimmed line start (minimum three backticks), so the
+ * payload can never terminate its own fence. Lines are emitted verbatim —
+ * no Markdown escaping inside code.
+ */
+function renderCodeBody(section: GeneratedDocumentSection): string {
+  const code = section.code;
+  if (code === undefined) {
+    invalidModelOutput(`code section is missing its code payload: ${section.id}`);
+  }
+  const fence = "`".repeat(Math.max(3, longestBacktickRunAtTrimmedLineStart(code.lines) + 1));
+  return [`${fence}${code.language ?? ""}`, ...code.lines, fence].join("\n");
+}
+
+/**
+ * Renders a table section as GitHub-flavored Markdown. Cells are escaped
+ * individually BEFORE joining so pipes inside cell content become `\|`
+ * while the ` | ` delimiters stay structural.
+ */
+function renderTableBody(section: GeneratedDocumentSection): string {
+  const table = section.table;
+  if (table === undefined) {
+    invalidModelOutput(`table section is missing its table payload: ${section.id}`);
+  }
+  const header = table.header.map((cell) => escapeMarkdownText(cell));
+  const rowLines = table.rows.map((row) => `| ${row.map((cell) => escapeMarkdownText(cell)).join(" | ")} |`);
+  return [`| ${header.join(" | ")} |`, `| ${header.map(() => "---").join(" | ")} |`, ...rowLines].join("\n");
 }

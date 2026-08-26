@@ -8,28 +8,34 @@ import {
   EnhancementRequestV1Schema,
   EnhancementResponseV1Schema,
   MAX_CHARS_PER_ITEM,
+  MAX_CODE_LINES,
   MAX_ITEMS_PER_SECTION,
   MAX_MODEL_OUTPUT_BYTES,
   MAX_NORMALIZED_MARKDOWN_CHARACTERS,
   MAX_PROMPT_CHARACTERS,
   MAX_REQUEST_BODY_BYTES,
   MAX_SELECTED_SECTIONS,
+  MAX_TABLE_CELL_CHARS,
+  MAX_TABLE_COLUMNS,
+  SECTION_LIMITS,
 } from "../lib/ai-enhancement/contracts";
 import { enhanceDeterministically } from "../lib/ai-enhancement/deterministic-service";
 import { getPromptPreset, PROMPT_PRESET_IDS, PROMPT_PRESETS } from "../lib/prompt-presets";
-import type { EnhancementLevel, PromptCategory, PromptTaskType, SectionId } from "../prompt-engine";
-import { enhancePrompt, resolveTemplate } from "../prompt-engine";
+import type { ContentSignals, EnhancementLevel, PromptCategory, PromptTaskType, SectionId } from "../prompt-engine";
+import { detectContentSignals, enhancePrompt, resolveTemplate } from "../prompt-engine";
 import { SECTION_TITLES } from "../prompt-engine/templates/template-types";
 import { DEFAULT_DEEPSEEK_TIMEOUT_MS, getAiConfig } from "../server/ai/config";
 import { createDeepSeekAdapter } from "../server/ai/deepseek-adapter";
 import { handleAiHttpRequest as apiEnhance, createAiHttpHandler } from "../server/ai/http-handler";
 import { type GeneratedDocument, parseModelDocument, renderGeneratedMarkdown } from "../server/ai/model-output";
 import { buildSystemInstruction, createOrchestrator } from "../server/ai/orchestrator";
-import { resolveTrustedPolicy } from "../server/ai/policy-resolver";
+import { type ResolvedEnhancementPolicy, resolveTrustedPolicy } from "../server/ai/policy-resolver";
 import {
   MANUAL_TASK_POLICIES,
   PRESET_AI_POLICIES,
   type ResolvedSectionPolicy,
+  resolveSectionFormats,
+  SECTION_FORMATS,
   type SectionFormat,
 } from "../server/ai/preset-policies";
 import assert from "node:assert/strict";
@@ -337,6 +343,55 @@ const MODEL_POLICY = resolveTrustedPolicy(
   policyRequest({ kind: "manual", taskType: "bug-fix" }, { sections: ["objective", "requirements", "verification"] }),
 );
 
+/**
+ * Builds a trusted policy with hand-picked dynamic formats so payload
+ * validation and rendering can be exercised independently of the engine's
+ * content signals.
+ */
+function makeRichSectionPolicy(
+  taskType: PromptTaskType,
+  category: PromptCategory,
+  sections: readonly { id: SectionId; format: SectionFormat }[],
+): ResolvedEnhancementPolicy {
+  return {
+    presetId: null,
+    taskType,
+    category,
+    level: "standard",
+    reasoningEffort: "high",
+    completionBudget: 8192,
+    purpose: "Exercise rich section payloads against the trusted validator and renderer.",
+    sections: sections.map((section) => ({
+      id: section.id,
+      title: SECTION_TITLES[section.id],
+      format: section.format,
+      guidance: "Follow the requested section format exactly using only facts stated in the source.",
+    })),
+  };
+}
+
+const CODE_POLICY = makeRichSectionPolicy("feature", "development", [{ id: "implementation", format: "code" }]);
+const TABLE_POLICY = makeRichSectionPolicy("comparison", "research", [{ id: "criteria", format: "table" }]);
+const TASKS_POLICY = makeRichSectionPolicy("testing", "development", [{ id: "verification", format: "tasks" }]);
+const MIXED_POLICY = makeRichSectionPolicy("feature", "development", [
+  { id: "objective", format: "paragraphs" },
+  { id: "implementation", format: "code" },
+  { id: "criteria", format: "table" },
+  { id: "verification", format: "tasks" },
+]);
+
+/** The all-false signal shape used to prove resolveSectionFormats is a pure no-op. */
+const QUIET_SIGNALS: ContentSignals = {
+  containsCode: false,
+  hasFencedCode: false,
+  fencedCodeCount: 0,
+  firstFenceLanguage: null,
+  inlineCodeSpanCount: 0,
+  wantsTable: false,
+  wantsSteps: false,
+  checklistIntent: false,
+};
+
 function validModelSections(): Array<{ id: SectionId; content: string[] }> {
   return [
     { id: "objective", content: ["Fix the login flow."] },
@@ -366,13 +421,40 @@ function validResult() {
   };
 }
 
+/**
+ * The request facts that decide dynamic section formats. When supplied, the
+ * canonical-format assertion computes the exact expected promotion through
+ * the same pure resolver the server uses, instead of assuming the static
+ * base map.
+ */
+type FormatExpectationContext = {
+  prompt: string;
+  taskType: PromptTaskType;
+  sections: readonly SectionId[];
+};
+
+function expectedSectionFormat(context: FormatExpectationContext, sectionId: SectionId): SectionFormat {
+  return resolveSectionFormats(
+    context.sections,
+    EXPECTED_SECTION_FORMATS,
+    detectContentSignals(context.prompt),
+    context.taskType,
+  )[sectionId];
+}
+
 function assertCanonicalSection(
   section: ResolvedSectionPolicy,
   trustedGuidance: Readonly<Partial<Record<SectionId, string>>>,
+  formatContext?: FormatExpectationContext,
 ): void {
   assert.ok(EXPECTED_SECTION_IDS.includes(section.id), `unknown resolved section ${section.id}`);
   assert.equal(section.title, SECTION_TITLES[section.id]);
-  assert.equal(section.format, EXPECTED_SECTION_FORMATS[section.id]);
+  assert.equal(
+    section.format,
+    formatContext === undefined
+      ? EXPECTED_SECTION_FORMATS[section.id]
+      : expectedSectionFormat(formatContext, section.id),
+  );
 
   const guidance = trustedGuidance[section.id];
   assert.ok(typeof guidance === "string" && guidance.trim().length > 0, `missing trusted guidance for ${section.id}`);
@@ -391,6 +473,17 @@ export const AI_CASES = [
       assert.equal(MAX_NORMALIZED_MARKDOWN_CHARACTERS, 24_000);
       assert.equal(MAX_ITEMS_PER_SECTION, 20);
       assert.equal(MAX_CHARS_PER_ITEM, 2_000);
+      assert.equal(MAX_CODE_LINES, 40);
+      assert.equal(MAX_TABLE_COLUMNS, 5);
+      assert.equal(MAX_TABLE_CELL_CHARS, 500);
+      assert.deepEqual(SECTION_LIMITS, {
+        maxSelectedSections: MAX_SELECTED_SECTIONS,
+        maxItemsPerSection: 20,
+        maxCharsPerItem: 2_000,
+        maxCodeLines: 40,
+        maxTableColumns: 5,
+        maxTableCellChars: 500,
+      });
     },
   },
   {
@@ -683,7 +776,13 @@ export const AI_CASES = [
             sections: expected.sections,
           },
         );
-        for (const section of resolved.sections) assertCanonicalSection(section, trustedPolicy.sectionGuidance);
+        for (const section of resolved.sections) {
+          assertCanonicalSection(section, trustedPolicy.sectionGuidance, {
+            prompt: "fix the login flow",
+            taskType: expected.taskType,
+            sections: expected.sections,
+          });
+        }
       }
     },
   },
@@ -705,7 +804,13 @@ export const AI_CASES = [
           resolved.sections.map((section) => section.id),
           preset.sections,
         );
-        for (const section of resolved.sections) assertCanonicalSection(section, trustedPolicy.sectionGuidance);
+        for (const section of resolved.sections) {
+          assertCanonicalSection(section, trustedPolicy.sectionGuidance, {
+            prompt: "fix the login flow",
+            taskType: preset.taskType,
+            sections: preset.sections,
+          });
+        }
       }
     },
   },
@@ -757,7 +862,11 @@ export const AI_CASES = [
           standardSections,
         );
         for (const section of standardResolved.sections) {
-          assertCanonicalSection(section, MANUAL_TASK_POLICIES[taskType].sectionGuidance);
+          assertCanonicalSection(section, MANUAL_TASK_POLICIES[taskType].sectionGuidance, {
+            prompt: "fix the login flow",
+            taskType,
+            sections: standardSections,
+          });
         }
       }
     },
@@ -773,7 +882,13 @@ export const AI_CASES = [
         for (const level of ["light", "standard", "detailed"] as const) {
           const sections = resolveTemplate(taskType).sections[level];
           const resolved = resolveTrustedPolicy(policyRequest({ kind: "manual", taskType }, { level, sections }));
-          for (const section of resolved.sections) assertCanonicalSection(section, policy.sectionGuidance);
+          for (const section of resolved.sections) {
+            assertCanonicalSection(section, policy.sectionGuidance, {
+              prompt: "fix the login flow",
+              taskType,
+              sections,
+            });
+          }
         }
       }
     },
@@ -799,7 +914,11 @@ export const AI_CASES = [
         ["objective", "criteria", "output-format"],
       );
       for (const section of resolved.sections) {
-        assertCanonicalSection(section, MANUAL_TASK_POLICIES.comparison.sectionGuidance);
+        assertCanonicalSection(section, MANUAL_TASK_POLICIES.comparison.sectionGuidance, {
+          prompt: "Compare the options and explain the trade-off.",
+          taskType: "comparison",
+          sections: ["objective", "criteria", "output-format"],
+        });
       }
     },
   },
@@ -1179,6 +1298,307 @@ sections: ["objective", "requirements", "verification"],
       );
       assert.equal(markdown.includes("javascript\\:"), true);
       assert.equal(markdown.endsWith("\n"), false);
+    },
+  },
+  {
+    name: "code sections require structured payloads and render verbatim fenced blocks",
+    run: () => {
+      const document = parseModelDocument(
+        modelJson([
+          {
+            id: "implementation",
+            content: ["Reproduce the reported behavior verbatim."],
+            code: { language: "ts", lines: ["const maxRetries = 3;", "if (!ok) {", "\tretry();", "}"] },
+          },
+        ]),
+        CODE_POLICY,
+      );
+      assert.equal(
+        renderGeneratedMarkdown(document, CODE_POLICY),
+        ["## Implementation", "", "```ts", "const maxRetries = 3;", "if (!ok) {", "\tretry();", "}", "```"].join("\n"),
+      );
+
+      const breakout = parseModelDocument(
+        modelJson([
+          {
+            id: "implementation",
+            content: ["Guarded fence.", 'code: { language: null, lines: ["```` nested"] }'],
+            code: { language: null, lines: ["```` nested"] },
+          },
+        ]),
+        CODE_POLICY,
+      );
+      assert.equal(
+        renderGeneratedMarkdown(breakout, CODE_POLICY),
+        ["## Implementation", "", "`````", "```` nested", "`````"].join("\n"),
+      );
+    },
+  },
+  {
+    name: "table and task payloads render GitHub-flavored structures exactly",
+    run: () => {
+      const tableDocument = parseModelDocument(
+        modelJson([
+          {
+            id: "criteria",
+            content: ["Weigh every stated option."],
+            table: {
+              header: ["Criterion", "Option A", "Option B"],
+              rows: [
+                ["Cost", "low", "high"],
+                ["Pipes", "a|b", ""],
+              ],
+            },
+          },
+        ]),
+        TABLE_POLICY,
+      );
+      assert.equal(
+        renderGeneratedMarkdown(tableDocument, TABLE_POLICY),
+        [
+          "## Criteria",
+          "",
+          "| Criterion | Option A | Option B |",
+          "| --- | --- | --- |",
+          "| Cost | low | high |",
+          "| Pipes | a\\|b |  |",
+        ].join("\n"),
+      );
+
+      const tasksDocument = parseModelDocument(
+        modelJson([{ id: "verification", content: ["[x] tests pass", "[ ] lint clean"] }]),
+        TASKS_POLICY,
+      );
+      assert.equal(
+        renderGeneratedMarkdown(tasksDocument, TASKS_POLICY),
+        ["## Verification", "", "- [x] tests pass", "- [ ] lint clean"].join("\n"),
+      );
+
+      // One mixed-format document validates every rich shape in canonical order.
+      const mixedDocument = parseModelDocument(
+        modelJson([
+          { id: "objective", content: ["Ship the exporter."] },
+          {
+            id: "implementation",
+            content: ["Reference implementation."],
+            code: { language: "py", lines: ["def run():", "\treturn 1"] },
+          },
+          {
+            id: "criteria",
+            content: ["Compare the candidates."],
+            table: { header: ["Criterion", "Winner"], rows: [["Speed", "A"]] },
+          },
+          { id: "verification", content: ["[ ] export succeeds"] },
+        ]),
+        MIXED_POLICY,
+      );
+      assert.deepEqual(renderGeneratedMarkdown(mixedDocument, MIXED_POLICY).split("\n"), [
+        "# Objective",
+        "",
+        "Ship the exporter.",
+        "",
+        "## Implementation",
+        "",
+        "```py",
+        "def run():",
+        "\treturn 1",
+        "```",
+        "",
+        "## Criteria",
+        "",
+        "| Criterion | Winner |",
+        "| --- | --- |",
+        "| Speed | A |",
+        "",
+        "## Verification",
+        "",
+        "- [ ] export succeeds",
+      ]);
+    },
+  },
+  {
+    name: "rich payload violations fail closed as invalid model output",
+    run: () => {
+      // Code format demands its payload.
+      assert.throws(
+        () => parseModelDocument(modelJson([{ id: "implementation", content: ["note only"] }]), CODE_POLICY),
+        /missing its code payload/,
+      );
+      // Too many code lines.
+      assert.throws(
+        () =>
+          parseModelDocument(
+            modelJson([
+              {
+                id: "implementation",
+                content: ["note"],
+                code: {
+                  language: null,
+                  lines: Array.from({ length: MAX_CODE_LINES + 1 }, (_, index) => `line ${index}`),
+                },
+              },
+            ]),
+            CODE_POLICY,
+          ),
+        /too many code lines/,
+      );
+      // Disallowed table beside a code payload.
+      assert.throws(
+        () =>
+          parseModelDocument(
+            modelJson([
+              {
+                id: "implementation",
+                content: ["note"],
+                code: { language: null, lines: ["x"] },
+                table: { header: ["A", "B"], rows: [["1", "2"]] },
+              },
+            ]),
+            CODE_POLICY,
+          ),
+        /disallowed table payload/,
+      );
+      // Ragged table rows are rejected instead of padded.
+      assert.throws(
+        () =>
+          parseModelDocument(
+            modelJson([
+              { id: "criteria", content: ["Compare."], table: { header: ["A", "B"], rows: [["only-one-cell"]] } },
+            ]),
+            TABLE_POLICY,
+          ),
+        /row width does not match the header/,
+      );
+      // Oversized table cells are rejected.
+      assert.throws(
+        () =>
+          parseModelDocument(
+            modelJson([
+              {
+                id: "criteria",
+                content: ["Compare."],
+                table: { header: ["A", "B"], rows: [["x".repeat(MAX_TABLE_CELL_CHARS + 1), "y"]] },
+              },
+            ]),
+            TABLE_POLICY,
+          ),
+        /table cell is too long/,
+      );
+      // Task items must carry their checkbox marker.
+      assert.throws(
+        () =>
+          parseModelDocument(modelJson([{ id: "verification", content: ["tests pass without marker"] }]), TASKS_POLICY),
+        /not a task checkbox item/,
+      );
+      // Paragraph sections must stay plain: no rich payloads allowed there.
+      assert.throws(
+        () =>
+          parseModelDocument(
+            modelJson(
+              validModelSections().map((section) =>
+                section.id === "objective" ? { ...section, code: { language: null, lines: ["x"] } } : section,
+              ),
+            ),
+            MODEL_POLICY,
+          ),
+        /rich payload its format does not allow/,
+      );
+      // Language tags are bounded identifiers, never prose or injection vectors.
+      assert.throws(() =>
+        parseModelDocument(
+          modelJson([{ id: "implementation", content: ["note"], code: { language: "not a lang!", lines: ["x"] } }]),
+          CODE_POLICY,
+        ),
+      );
+    },
+  },
+  {
+    name: "dynamic format promotion stays deterministic and single-slot",
+    run: () => {
+      // Quiet signals leave every base format untouched.
+      assert.deepEqual(
+        resolveSectionFormats(["objective", "verification"], SECTION_FORMATS, QUIET_SIGNALS, "bug-fix"),
+        {
+          ...SECTION_FORMATS,
+        },
+      );
+
+      // containsCode promotes exactly one section: the first eligible selected.
+      const codeFormats = resolveSectionFormats(
+        ["objective", "context", "requirements", "verification"],
+        SECTION_FORMATS,
+        { ...QUIET_SIGNALS, containsCode: true, hasFencedCode: true },
+        "bug-fix",
+      );
+      assert.equal(codeFormats.context, "code");
+      assert.equal(codeFormats.requirements, "bullets");
+      assert.equal(codeFormats.verification, "bullets");
+
+      // Table wording promotes once; the comparison task type alone also promotes.
+      const tableFormats = resolveSectionFormats(
+        ["criteria", "comparison-scope"],
+        SECTION_FORMATS,
+        {
+          ...QUIET_SIGNALS,
+          wantsTable: true,
+        },
+        "comparison",
+      );
+      assert.equal(tableFormats.criteria, "table");
+      assert.equal(tableFormats["comparison-scope"], "paragraphs");
+      assert.equal(
+        resolveSectionFormats(["comparison-scope"], SECTION_FORMATS, QUIET_SIGNALS, "comparison")["comparison-scope"],
+        "table",
+      );
+
+      // Checklist intent may promote both naturally checklist-shaped sections.
+      const tasksFormats = resolveSectionFormats(
+        ["acceptance-criteria", "verification"],
+        SECTION_FORMATS,
+        {
+          ...QUIET_SIGNALS,
+          checklistIntent: true,
+        },
+        "testing",
+      );
+      assert.equal(tasksFormats["acceptance-criteria"], "tasks");
+      assert.equal(tasksFormats.verification, "tasks");
+
+      // The trusted resolver derives promotions from the raw prompt text alone.
+      const resolved = resolveTrustedPolicy(
+        policyRequest(
+          { kind: "manual", taskType: "feature" },
+          {
+            prompt: "Add dark mode:\n\n```css\nhtml.dark { color-scheme: dark; }\n```",
+            sections: ["objective", "context", "requirements", "verification"],
+          },
+        ),
+      );
+      const byId = new Map(resolved.sections.map((section) => [section.id, section]));
+      assert.equal(byId.get("context")?.format, "code");
+      assert.equal(byId.get("requirements")?.format, "bullets");
+
+      const checklistResolved = resolveTrustedPolicy(
+        policyRequest(
+          { kind: "manual", taskType: "bug-fix" },
+          {
+            prompt: "Create a deployment checklist for the billing page",
+            sections: ["objective", "requirements", "verification"],
+          },
+        ),
+      );
+      assert.equal(checklistResolved.sections.find((section) => section.id === "verification")?.format, "tasks");
+
+      const tableResolved = resolveTrustedPolicy(
+        policyRequest(
+          { kind: "manual", taskType: "comparison" },
+          {
+            prompt: "Compare PostgreSQL vs MySQL in a table",
+            sections: ["objective", "criteria", "output-format"],
+          },
+        ),
+      );
+      assert.equal(tableResolved.sections.find((section) => section.id === "criteria")?.format, "table");
     },
   },
   {

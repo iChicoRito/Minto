@@ -246,6 +246,7 @@ export function buildSystemInstruction(policy: ResolvedEnhancementPolicy): strin
     `Enhancement level is ${policy.level}; apply ${policy.level} depth without exceeding the bounded section content limits.`,
     "Return exactly one JSON object matching {sections:[{id,content:string[]}]}; do not return Markdown or any extra keys.",
     "Use requested section ids only, include every requested id exactly once, and keep each section to at most 20 items with at most 2,000 characters per item.",
+    'For sections whose format is "code", include {"language":"<lang>|null","lines":["…"]} on that section and reproduce source code from the sourcePrompt verbatim without inventing fixes; for "table", include {"header":["…"],"rows":[["…"]]} with equal-length rows using only facts stated in the source; for "tasks", write every content item as "[ ] description" or "[x] description" marking completion only when the source states it.',
     JSON.stringify({
       purpose: policy.purpose,
       sections: policy.sections.map(({ id, title, format, guidance }) => ({ id, title, format, guidance })),

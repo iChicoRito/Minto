@@ -20,6 +20,7 @@
 import { enhancePrompt } from "../prompt-engine";
 import { classifyPrompt } from "../prompt-engine/classifier/classify-prompt";
 import { generateMarkdown } from "../prompt-engine/generator/generate-markdown";
+import { detectContentSignals, extractFirstFencedCode } from "../prompt-engine/parser/detect-content-signals";
 import { parsePrompt } from "../prompt-engine/parser/parse-prompt";
 import { polishLight } from "../prompt-engine/rules/light-polish";
 import { selectSections } from "../prompt-engine/rules/select-sections";
@@ -33,6 +34,7 @@ import {
   PARSER_CASES,
   PIPELINE_CASES,
   RULES_CASES,
+  SIGNALS_CASES,
   TEMPLATE_CASES,
 } from "./verify-cases";
 import assert from "node:assert/strict";
@@ -44,6 +46,7 @@ type TemplateCase = (typeof TEMPLATE_CASES)[number];
 type RulesCase = (typeof RULES_CASES)[number];
 type GeneratorCase = (typeof GENERATOR_CASES)[number];
 type PipelineCase = (typeof PIPELINE_CASES)[number];
+type SignalsCase = (typeof SIGNALS_CASES)[number];
 
 /** One recorded failure, echoed immediately and listed again in the summary. */
 type Failure = {
@@ -368,6 +371,48 @@ function verifyGeneratorCase(testCase: GeneratorCase, failures: Failure[]): void
   }
 }
 
+/**
+ * Verifies one content-signal case. Gate 1 (determinism): the scanner and
+ * fence extractor each run twice per case and both results must serialize
+ * byte-identically. Gate 2 (expectation): deepStrictEqual on the full signal
+ * record, plus the exact first-fence extraction when the case declares it.
+ */
+function verifySignalsCase(testCase: SignalsCase, failures: Failure[]): void {
+  const firstSignals = detectContentSignals(testCase.input);
+  const secondSignals = detectContentSignals(testCase.input);
+  const firstFence = extractFirstFencedCode(testCase.input);
+  const secondFence = extractFirstFencedCode(testCase.input);
+
+  if (
+    JSON.stringify(firstSignals) !== JSON.stringify(secondSignals) ||
+    JSON.stringify(firstFence) !== JSON.stringify(secondFence)
+  ) {
+    recordFailure(failures, "signals", `${testCase.name} (determinism)`, [
+      `run 1 signals: ${JSON.stringify(firstSignals)}`,
+      `run 2 signals: ${JSON.stringify(secondSignals)}`,
+    ]);
+    return;
+  }
+
+  try {
+    assert.deepStrictEqual(firstSignals, testCase.expected);
+    if (testCase.expectedFirstFence !== undefined) {
+      assert.deepStrictEqual(firstFence, testCase.expectedFirstFence);
+    }
+  } catch {
+    recordFailure(failures, "signals", testCase.name, [
+      `expected signals: ${JSON.stringify(testCase.expected)}`,
+      `got signals:      ${JSON.stringify(firstSignals)}`,
+      ...(testCase.expectedFirstFence === undefined
+        ? []
+        : [
+            `expected fence: ${JSON.stringify(testCase.expectedFirstFence)}`,
+            `got fence:      ${JSON.stringify(firstFence)}`,
+          ]),
+    ]);
+  }
+}
+
 /** Verifies the public pipeline's analysis contract, output structure, and no-throw behavior. */
 function verifyPipelineCase(testCase: PipelineCase, failures: Failure[]): void {
   let firstRun: ReturnType<typeof enhancePrompt>;
@@ -441,6 +486,7 @@ function main(): void {
   const failures: Failure[] = [];
   const sections: SectionResult[] = [
     runSection("parser", PARSER_CASES, verifyParserCase, failures),
+    runSection("signals", SIGNALS_CASES, verifySignalsCase, failures),
     runSection("classifier", CLASSIFIER_CASES, verifyClassifierCase, failures),
     runTemplatesSection(failures),
     runSection("rules", RULES_CASES, verifyRulesCase, failures),

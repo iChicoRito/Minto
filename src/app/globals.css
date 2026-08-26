@@ -239,6 +239,11 @@ These serve as the fallback; there is no separate default.css file. */
   }
 }
 
+/* enhancer: markdown preview - scope GFM task-list checkboxes to the theme accent */
+.prose :where(input[type="checkbox"]) {
+  accent-color: var(--color-primary, var(--primary));
+}
+
 html {
   overscroll-behavior: none;
 }

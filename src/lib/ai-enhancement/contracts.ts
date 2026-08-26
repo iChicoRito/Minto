@@ -17,6 +17,9 @@ export const MAX_MODEL_OUTPUT_BYTES = 64 * 1024;
 export const MAX_NORMALIZED_MARKDOWN_CHARACTERS = 24_000;
 export const MAX_ITEMS_PER_SECTION = 20;
 export const MAX_CHARS_PER_ITEM = 2_000;
+export const MAX_CODE_LINES = 40;
+export const MAX_TABLE_COLUMNS = 5;
+export const MAX_TABLE_CELL_CHARS = 500;
 
 const SECTION_ID_VALUES = Object.keys(SECTION_TITLES) as [SectionId, ...SectionId[]];
 export const MAX_SELECTED_SECTIONS = SECTION_ID_VALUES.length;
@@ -25,6 +28,9 @@ export const SECTION_LIMITS = {
   maxSelectedSections: MAX_SELECTED_SECTIONS,
   maxItemsPerSection: MAX_ITEMS_PER_SECTION,
   maxCharsPerItem: MAX_CHARS_PER_ITEM,
+  maxCodeLines: MAX_CODE_LINES,
+  maxTableColumns: MAX_TABLE_COLUMNS,
+  maxTableCellChars: MAX_TABLE_CELL_CHARS,
 } as const;
 
 export type ReasoningEffort = "low" | "high" | "max";

@@ -1,8 +1,20 @@
 import { getPromptPreset, PROMPT_PRESET_IDS, type PromptPresetId } from "../../lib/prompt-presets";
-import { type PromptCategory, type PromptTaskType, resolveTemplate, type SectionId } from "../../prompt-engine";
+import {
+  type ContentSignals,
+  type PromptCategory,
+  type PromptTaskType,
+  resolveTemplate,
+  type SectionId,
+} from "../../prompt-engine";
 import { SECTION_TITLES } from "../../prompt-engine/templates/template-types";
 
-export type SectionFormat = "paragraphs" | "bullets";
+/**
+ * Per-section rendering contract for the model-facing document protocol.
+ * "paragraphs" and "bullets" are the static canonical bases; "tasks",
+ * "code", and "table" are dynamic promotions resolved per request from
+ * deterministic content signals (see resolveSectionFormats).
+ */
+export type SectionFormat = "paragraphs" | "bullets" | "tasks" | "code" | "table";
 
 export type ResolvedSectionPolicy = {
   id: SectionId;
@@ -26,7 +38,13 @@ export type TaskAiPolicy = {
   sectionGuidance: Readonly<Partial<Record<SectionId, string>>>;
 };
 
-const SECTION_FORMATS: Readonly<Record<SectionId, SectionFormat>> = {
+/**
+ * Static canonical base format per section id. This is the trusted default
+ * every request starts from; dynamic promotions never accumulate across
+ * requests because resolveSectionFormats always copies this map (or the
+ * caller-provided base) before mutating it.
+ */
+export const SECTION_FORMATS: Readonly<Record<SectionId, SectionFormat>> = {
   objective: "paragraphs",
   problem: "paragraphs",
   scope: "paragraphs",
@@ -52,6 +70,77 @@ const SECTION_FORMATS: Readonly<Record<SectionId, SectionFormat>> = {
   "style-direction": "paragraphs",
   "technical-requirements": "bullets",
 };
+
+/**
+ * Server-trusted, deterministic eligibility lists for dynamic format
+ * promotions. Order matters: when several eligible ids are selected at
+ * once, the FIRST selected id in list order wins the single-slot promotion.
+ * Mirrors CODE_SECTION_PRIORITY in prompt-engine/rules/intent-blocks.ts.
+ */
+export const CODE_ELIGIBLE_SECTIONS: readonly SectionId[] = [
+  "implementation",
+  "context",
+  "technical-requirements",
+  "problem",
+  "requirements",
+  "verification",
+];
+export const TABLE_ELIGIBLE_SECTIONS: readonly SectionId[] = ["criteria", "comparison-scope"];
+export const TASKS_ELIGIBLE_SECTIONS: readonly SectionId[] = ["acceptance-criteria", "verification"];
+
+/**
+ * Resolves the per-request section formats from static base formats plus
+ * deterministic, server-computed content signals. Pure: never mutates
+ * baseFormats and never reads anything but its arguments, so identical
+ * inputs always yield identical formats on the trusted server path.
+ *
+ * Rules:
+ * - At most ONE selected section becomes "code": the first selected id in
+ *   CODE_ELIGIBLE_SECTIONS order, and only when the source contains code.
+ * - At most ONE selected section becomes "table": the first selected id in
+ *   TABLE_ELIGIBLE_SECTIONS order, when signals request a table or the
+ *   resolved task is a comparison (comparisons are table-shaped by policy).
+ * - Every selected TASKS_ELIGIBLE_SECTIONS id becomes "tasks" when the
+ *   source carries checklist intent; these sections are naturally
+ *   checklist-shaped, so all of them may promote together.
+ * - Everything else keeps its base format unchanged.
+ *
+ * The eligibility sets are disjoint by construction, so a section can never
+ * receive two competing promotions.
+ */
+export function resolveSectionFormats(
+  selectedIds: readonly SectionId[],
+  baseFormats: Readonly<Record<SectionId, SectionFormat>>,
+  signals: ContentSignals,
+  taskType: PromptTaskType,
+): Readonly<Record<SectionId, SectionFormat>> {
+  const selected = new Set(selectedIds);
+  const formats: Record<SectionId, SectionFormat> = { ...baseFormats };
+
+  if (signals.containsCode) {
+    const codeSectionId = CODE_ELIGIBLE_SECTIONS.find((sectionId) => selected.has(sectionId));
+    if (codeSectionId !== undefined) {
+      formats[codeSectionId] = "code";
+    }
+  }
+
+  if (signals.wantsTable || taskType === "comparison") {
+    const tableSectionId = TABLE_ELIGIBLE_SECTIONS.find((sectionId) => selected.has(sectionId));
+    if (tableSectionId !== undefined) {
+      formats[tableSectionId] = "table";
+    }
+  }
+
+  if (signals.checklistIntent) {
+    for (const tasksSectionId of TASKS_ELIGIBLE_SECTIONS) {
+      if (selected.has(tasksSectionId)) {
+        formats[tasksSectionId] = "tasks";
+      }
+    }
+  }
+
+  return formats;
+}
 
 const COMMON_SECTION_GUIDANCE: Readonly<Record<SectionId, string>> = {
   objective: "State the desired outcome in one precise, testable sentence.",

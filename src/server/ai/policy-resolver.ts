@@ -4,12 +4,20 @@ import {
   EnhancementRequestV1Schema,
 } from "../../lib/ai-enhancement/contracts";
 import { getPromptPreset, type PromptPresetId } from "../../lib/prompt-presets";
-import { type EnhancementLevel, enhancePrompt, type PromptCategory, type PromptTaskType } from "../../prompt-engine";
+import {
+  detectContentSignals,
+  type EnhancementLevel,
+  enhancePrompt,
+  type PromptCategory,
+  type PromptTaskType,
+} from "../../prompt-engine";
 import {
   allowedSectionIds,
   MANUAL_TASK_POLICIES,
   PRESET_AI_POLICIES,
   type ResolvedSectionPolicy,
+  resolveSectionFormats,
+  SECTION_FORMATS,
   sectionPolicyFor,
 } from "./preset-policies";
 
@@ -88,6 +96,11 @@ export function resolveTrustedPolicy(request: EnhancementRequestV1): ResolvedEnh
         ? resolvedSectionIds
         : allowedIds.slice(0, 1);
   const config = levelConfig(trusted.level);
+  // Section formats stay server-owned and deterministic: content signals are
+  // derived from the trusted prompt text here, never from client input, and
+  // the resolved format overrides the static base carried by sectionPolicyFor.
+  const signals = detectContentSignals(trusted.prompt);
+  const formats = resolveSectionFormats(effectiveIds, SECTION_FORMATS, signals, taskType);
   return {
     presetId,
     taskType,
@@ -96,6 +109,9 @@ export function resolveTrustedPolicy(request: EnhancementRequestV1): ResolvedEnh
     reasoningEffort: config.reasoningEffort,
     completionBudget: config.completionBudget,
     purpose: policy.purpose,
-    sections: effectiveIds.map((sectionId) => sectionPolicyFor(policy, sectionId)),
+    sections: effectiveIds.map((sectionId) => ({
+      ...sectionPolicyFor(policy, sectionId),
+      format: formats[sectionId],
+    })),
   };
 }
