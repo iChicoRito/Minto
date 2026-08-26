@@ -1,3 +1,5 @@
+import React from "react";
+
 import type { EnhancementRequestV1, EnhancementResultV1 } from "../lib/ai-enhancement/contracts";
 import { ENHANCEMENT_ERROR_CODES } from "../lib/ai-enhancement/contracts";
 import { createPredictiveTextClient, PredictiveTextClientError } from "../lib/predictive-text/client";
@@ -16,6 +18,23 @@ import { findHistorySuggestion, type PredictiveHistoryEntry } from "../lib/predi
 import { createAiHttpHandler } from "../server/ai/http-handler";
 import { createPredictiveTextOrchestrator } from "../server/ai/predictive-text-orchestrator";
 import assert from "node:assert/strict";
+import Module from "node:module";
+import path from "node:path";
+
+// The UI-component cases below dynamically import app code that itself imports via
+// the "@/*" tsconfig alias, which plain ts-node cannot resolve. Patch Node's module
+// resolution for this script only: rewrite "@/" prefixes to "<cwd>/src/" and pass
+// everything else through untouched.
+type ResolveFilename = (request: string, parent: unknown, isMain?: boolean) => string;
+const moduleInternals = Module as unknown as { _resolveFilename: ResolveFilename };
+const originalResolveFilename = moduleInternals._resolveFilename;
+moduleInternals._resolveFilename = function resolveWithSrcAlias(request, ...rest) {
+  const mapped =
+    typeof request === "string" && request.startsWith("@/")
+      ? path.join(process.cwd(), "src", request.slice(2))
+      : request;
+  return originalResolveFilename.call(this, mapped, ...rest);
+};
 
 type VerificationCase = { name: string; run: () => void | Promise<void> };
 
@@ -512,6 +531,53 @@ export const PREDICTIVE_TEXT_CASES: readonly VerificationCase[] = [
       assert.equal(wrongMethod.status, 405);
       assert.equal(wrongMethod.headers.get("Access-Control-Allow-Origin"), "https://test.example");
       assert.equal(predictorCalls, 0);
+    },
+  },
+  {
+    name: "prediction pending indicator announces while waiting",
+    run: async () => {
+      const { PredictionPendingIndicator } = await import("../app/(main)/_components/prediction-pending-indicator");
+      const { renderToStaticMarkup } = await import("react-dom/server");
+      const markup = renderToStaticMarkup(React.createElement(PredictionPendingIndicator, { pending: true }));
+      assert.ok(markup.includes("Predicting text..."), "pending indicator should render its label");
+      assert.ok(markup.includes('role="status"'), "pending indicator should be a polite live region");
+    },
+  },
+  {
+    name: "prediction pending indicator reserves space and stays silent when idle",
+    run: async () => {
+      const { PredictionPendingIndicator } = await import("../app/(main)/_components/prediction-pending-indicator");
+      const { renderToStaticMarkup } = await import("react-dom/server");
+      const markup = renderToStaticMarkup(React.createElement(PredictionPendingIndicator, { pending: false }));
+      assert.equal(markup.includes("Predicting text..."), false, "idle indicator must not render its label");
+      assert.ok(markup.includes('role="status"'), "reserved slot should exist even when idle");
+      assert.ok(markup.includes("h-4"), "idle indicator should still reserve its height to avoid layout shift");
+    },
+  },
+  {
+    name: "prompt input renders the reserved indicator slot below the field",
+    run: async () => {
+      const { PredictivePromptInput } = await import("../app/(main)/_components/predictive-prompt-input");
+      const { renderToStaticMarkup } = await import("react-dom/server");
+      const markup = renderToStaticMarkup(
+        React.createElement(PredictivePromptInput, {
+          id: "prompt-input",
+          value: "",
+          disabled: false,
+          history: [],
+          historyResolved: true,
+          predictionService: null,
+          predictiveEnabled: true,
+          onValueChange: () => undefined,
+          onSubmit: () => undefined,
+        }),
+      );
+      assert.equal(markup.includes("Predicting text..."), false, "idle prompt input must hide the pending label");
+      assert.equal(
+        markup.split('role="status"').length - 1,
+        1,
+        "exactly one reserved status slot should exist below the field",
+      );
     },
   },
 ];

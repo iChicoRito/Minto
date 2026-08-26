@@ -5,6 +5,7 @@ import { type KeyboardEvent, type SyntheticEvent, useCallback, useEffect, useRef
 import { Textarea } from "@/components/ui/textarea";
 import type { PredictiveHistoryEntry, PredictiveTextService } from "@/lib/predictive-text/contracts";
 
+import { PredictionPendingIndicator } from "./prediction-pending-indicator";
 import { usePredictiveSuggestion } from "./use-predictive-suggestion";
 
 export type PredictivePromptInputProps = {
@@ -186,6 +187,7 @@ export function PredictivePromptInput({
           aria-describedby={`${helpId} ${statusId}`}
         />
       </div>
+      <PredictionPendingIndicator pending={pending} />
       <p id={helpId} className="sr-only">
         Press Enter to submit. Press Shift+Enter to add a new line. Press Tab to accept an inline suggestion.
       </p>

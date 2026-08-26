@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Download, Edit3, MoreVertical, RefreshCw, Save, Wand2 } from "lucide-react";
+import { AlignLeft, Copy, Download, Edit3, FileText, MoreVertical, RefreshCw, Save, Wand2 } from "lucide-react";
 
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { MarkdownPreview } from "@/components/markdown/markdown-preview";
@@ -42,7 +42,8 @@ export function ResultPanel({
   state,
   onViewChange,
   onMarkdownChange,
-  onCopy,
+  onCopyMarkdown,
+  onCopyPlainText,
   onExport,
   onSave,
   saveDisabled = false,
@@ -55,7 +56,8 @@ export function ResultPanel({
   state: WorkspaceState;
   onViewChange: (view: WorkspaceState["view"]) => void;
   onMarkdownChange: (markdown: string) => void;
-  onCopy: () => void;
+  onCopyMarkdown: () => void;
+  onCopyPlainText: () => void;
   onExport: () => void;
   onSave?: () => void;
   saveDisabled?: boolean;
@@ -107,9 +109,21 @@ export function ResultPanel({
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={onCopy} aria-label="Copy result">
-              <Copy /> Copy
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" size="sm" aria-label="Copy result">
+                  <Copy /> Copy
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => onCopyMarkdown()}>
+                  <FileText /> Copy as Markdown
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onCopyPlainText()}>
+                  <AlignLeft /> Copy as Plain Text
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button type="button" variant="ghost" size="icon-sm" aria-label="Result actions">

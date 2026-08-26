@@ -5,6 +5,7 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { toast } from "sonner";
 
+import { markdownToPlainText } from "@/components/markdown/markdown-to-plain-text";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useConfirm } from "@/hooks/use-confirm";
 import { createAiEnhancementClient, type EnhancementService } from "@/lib/ai-enhancement/client";
@@ -374,13 +375,23 @@ export function EnhancerWorkspace() {
     }
   };
 
-  const copy = async () => {
+  const copyMarkdown = async () => {
     if (!state.document) return;
     try {
       await copyText(state.document.markdown);
       toast.success("Markdown copied.");
     } catch {
       toast.error("Clipboard access failed. Select the Markdown and copy it manually.");
+    }
+  };
+
+  const copyPlainText = async () => {
+    if (!state.document) return;
+    try {
+      await copyText(markdownToPlainText(state.document.markdown));
+      toast.success("Plain text copied.");
+    } catch {
+      toast.error("Clipboard access failed. Select the text and copy it manually.");
     }
   };
 
@@ -425,7 +436,8 @@ export function EnhancerWorkspace() {
             state={state}
             onViewChange={(view) => dispatch({ type: "view-changed", view })}
             onMarkdownChange={(markdown) => dispatch({ type: "markdown-changed", markdown })}
-            onCopy={copy}
+            onCopyMarkdown={copyMarkdown}
+            onCopyPlainText={copyPlainText}
             onExport={exportMarkdown}
             onSave={save}
             saveDisabled={savePending || historyPending || memoryStatus !== "ready"}
